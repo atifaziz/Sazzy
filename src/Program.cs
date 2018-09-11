@@ -79,9 +79,7 @@ namespace Sazzy
 
                         var line = ReadLine(input);
                         if (!string.IsNullOrEmpty(line))
-                        {
-                            throw new Exception("Expected empty line but was " + line);
-                        }
+                            throw new Exception("Invalid HTTP chunked transfer encoding.");
 
                         state = State.ChunkSize;
                         break;
