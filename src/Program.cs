@@ -16,9 +16,9 @@ namespace Sazzy
             var state = State.Headers;
             var chunkSize = 0;
             var contentLength = -1;
-            var sb = new StringBuilder();
 
             using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read))
+            using (var output = Console.OpenStandardOutput())
             {
                 while (state != State.End)
                 {
@@ -53,7 +53,7 @@ namespace Sazzy
                             var buffer = new byte[chunkSize];
                             if (stream.Read(buffer, 0, chunkSize) < 0)
                                 throw new Exception("");
-                            sb.Append(Encoding.ASCII.GetString(buffer, 0, chunkSize));
+                            output.Write(buffer, 0, chunkSize);
 
                             var line = stream.ReadLine();
                             if (!string.IsNullOrEmpty(line))
@@ -66,12 +66,10 @@ namespace Sazzy
                         case State.Body:
                         {
                             var buffer = new byte[contentLength];
-                            var result = new StringBuilder();
 
                             if (stream.Read(buffer, 0, contentLength) < 0)
                                 throw new Exception("");
-                            result.Append(Encoding.ASCII.GetString(buffer, 0, contentLength));
-                            sb.Append(result.ToString());
+                            output.Write(buffer, 0, contentLength);
 
                             state = State.End;
                             break;
@@ -79,8 +77,6 @@ namespace Sazzy
                     }
                 }
             }
-
-            Console.WriteLine(sb.ToString());
         }
     }
 }
