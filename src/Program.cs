@@ -16,7 +16,7 @@ namespace Sazzy
 
         static readonly char[] Colon = { ':' };
 
-        enum State { Headers, ChunkSize, Body }
+        enum State { Headers, Body, ChunkSize, BodyChunk }
 
         static void CopyHttpContent(Stream input, Stream output)
         {
@@ -61,10 +61,10 @@ namespace Sazzy
                         chunkSize = int.Parse(ReadLine(input), NumberStyles.HexNumber);
                         if (chunkSize == 0)
                             return;
-                        state = State.Body;
+                        state = State.BodyChunk;
                         break;
                     }
-                    case State.Body when chunked:
+                    case State.BodyChunk:
                     {
                         CopyBody(chunkSize);
 
