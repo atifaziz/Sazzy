@@ -13,7 +13,7 @@ namespace Sazzy
             var result = new StringBuilder();
             int b;
             char character;
-            while ((b = stream.ReadByte()) > 0 && ((character = (char) b) != '\n')) //TODO what if \n\r\n
+            while ((b = stream.ReadByte()) >= 0 && ((character = (char) b) != '\n')) //TODO what if \n\r\n
             {
                 if (character != '\r' && character != '\n')
                     result.Append(character);
