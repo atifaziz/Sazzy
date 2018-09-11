@@ -4,7 +4,6 @@ namespace Sazzy
     using System.Globalization;
     using System.IO;
     using System.Text;
-    using System.Text.RegularExpressions;
 
     static class Program
     {
@@ -14,6 +13,8 @@ namespace Sazzy
             using (var output = Console.OpenStandardOutput())
                 CopyHttpContent(stream, output);
         }
+
+        static readonly char[] Colon = { ':' };
 
         enum State { Headers, ChunkSize, Body }
 
@@ -36,13 +37,21 @@ namespace Sazzy
                         {
                             state = chunked ? State.ChunkSize : State.Body;
                         }
-                        else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
+                        else
                         {
-                            chunked = true;
-                        }
-                        else if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            contentLength = int.Parse(Regex.Match(line, @"(?<=Content-Length: )\d+$").Value);
+                            var pair = line.Split(Colon, 2);
+                            if (pair.Length > 1)
+                            {
+                                var (header, value) = (pair[0].Trim(), pair[1]);
+                                if ("Transfer-Encoding".Equals(header, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                                }
+                                else if ("Content-Length".Equals(header, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    contentLength = int.Parse(value, NumberStyles.Integer & ~NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+                                }
+                            }
                         }
 
                         break;
