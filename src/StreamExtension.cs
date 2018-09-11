@@ -3,6 +3,7 @@ namespace Sazzy
     using System;
     using System.IO;
     using System.Text;
+
     public static class StreamExtension
     {
         public static string ReadLine(this Stream stream)
@@ -20,6 +21,7 @@ namespace Sazzy
             }
             return result.ToString();
         }
+
         public static string ReadToEnd(this Stream stream, int contentLength)
         {
             if (contentLength < 0)

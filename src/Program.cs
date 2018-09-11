@@ -9,6 +9,7 @@ namespace Sazzy
     static class Program
     {
         enum State { Headers, ChunkSize, Body, End };
+
         static void Main(string[] args)
         {
             var chunked = false;
@@ -69,6 +70,7 @@ namespace Sazzy
                     }
                 }
             }
+
             Console.WriteLine(sb.ToString());
         }
     }
