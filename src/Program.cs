@@ -3,6 +3,7 @@ namespace Sazzy
     using System;
     using System.Globalization;
     using System.IO;
+    using System.Text;
     using System.Text.RegularExpressions;
 
     static class Program
@@ -29,7 +30,7 @@ namespace Sazzy
                 {
                     case State.Headers:
                     {
-                        var line = input.ReadLine();
+                        var line = ReadLine(input);
                         if (string.IsNullOrEmpty(line))
                         {
                             state = chunked ? State.ChunkSize : State.Body;
@@ -47,7 +48,7 @@ namespace Sazzy
                     }
                     case State.ChunkSize:
                     {
-                        chunkSize = int.Parse(input.ReadLine(), NumberStyles.HexNumber);
+                        chunkSize = int.Parse(ReadLine(input), NumberStyles.HexNumber);
                         if (chunkSize == 0)
                             return;
                         state = State.Body;
@@ -66,7 +67,7 @@ namespace Sazzy
                             chunkSize -= read;
                         }
 
-                        var line = input.ReadLine();
+                        var line = ReadLine(input);
                         if (!string.IsNullOrEmpty(line))
                         {
                             throw new Exception("Expected empty line but was " + line);
@@ -91,6 +92,22 @@ namespace Sazzy
                         return;
                     }
                 }
+            }
+
+            string ReadLine(Stream stream)
+            {
+                if (!stream.CanRead || stream.Position == stream.Length)
+                    return null;
+
+                var result = new StringBuilder();
+                int b;
+                char character;
+                while ((b = stream.ReadByte()) >= 0 && ((character = (char) b) != '\n'))
+                {
+                    if (character != '\r' && character != '\n')
+                        result.Append(character);
+                }
+                return result.ToString();
             }
         }
     }
