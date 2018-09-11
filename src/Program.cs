@@ -96,9 +96,6 @@ namespace Sazzy
 
             string ReadLine(Stream stream)
             {
-                if (!stream.CanRead || stream.Position == stream.Length)
-                    return null;
-
                 var result = new StringBuilder();
                 int b;
                 char character;
