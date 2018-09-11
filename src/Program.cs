@@ -51,9 +51,15 @@ namespace Sazzy
                         case State.Body when chunked:
                         {
                             var buffer = new byte[chunkSize];
-                            if (stream.Read(buffer, 0, chunkSize) < 0)
-                                throw new Exception("");
-                            output.Write(buffer, 0, chunkSize);
+                            do
+                            {
+                                var read = stream.Read(buffer, 0, buffer.Length);
+                                if (read < 0)
+                                    throw new Exception("");
+                                output.Write(buffer, 0, read);
+                                chunkSize -= read;
+                            }
+                            while (chunkSize > 0);
 
                             var line = stream.ReadLine();
                             if (!string.IsNullOrEmpty(line))
@@ -67,9 +73,15 @@ namespace Sazzy
                         {
                             var buffer = new byte[contentLength];
 
-                            if (stream.Read(buffer, 0, contentLength) < 0)
-                                throw new Exception("");
-                            output.Write(buffer, 0, contentLength);
+                            do
+                            {
+                                var read = stream.Read(buffer, 0, buffer.Length);
+                                if (read < 0)
+                                    throw new Exception("");
+                                output.Write(buffer, 0, read);
+                                contentLength -= read;
+                            }
+                            while (contentLength > 0);
 
                             state = State.End;
                             break;
