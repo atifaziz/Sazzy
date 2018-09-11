@@ -20,42 +20,43 @@ namespace Sazzy
 
             while (state != State.End)
             {
-                if (state == State.Headers)
+                switch (state)
                 {
-                    string line = stream.ReadLine();
-                    if (string.IsNullOrEmpty(line))
+                    case State.Headers:
                     {
-                        if (chunked)
+                        string line = stream.ReadLine();
+                        if (string.IsNullOrEmpty(line))
                         {
-                            state = State.ChunkSize;
+                            if (chunked)
+                            {
+                                state = State.ChunkSize;
+                            }
+                            else
+                            {
+                                state = State.Body;
+                            }
                         }
-                        else
+                        else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
                         {
+                            chunked = true;
+                        }
+                        else if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            contentLength = int.Parse(Regex.Match(line, @"(?<=Content-Length: )\d+$").Value);
+                        }
+
+                        break;
+                    }
+                    case State.ChunkSize:
+                    {
+                        chunkSize = int.Parse(stream.ReadLine(), NumberStyles.HexNumber);
+                        if (chunkSize > 0)
                             state = State.Body;
-                        }
+                        else
+                            state = State.End;
+                        break;
                     }
-                    else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
-                    {
-                        chunked = true;
-                    }
-                    else if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        contentLength = int.Parse(Regex.Match(line, @"(?<=Content-Length: )\d+$").Value);
-                    }
-                }
-
-                if (state == State.ChunkSize)
-                {
-                    chunkSize = int.Parse(stream.ReadLine(), NumberStyles.HexNumber);
-                    if (chunkSize > 0)
-                        state = State.Body;
-                    else
-                        state = State.End;
-                }
-
-                if (state == State.Body)
-                {
-                    if (chunked)
+                    case State.Body when chunked:
                     {
                         byte[] buffer = new byte[chunkSize];
                         if (stream.Read(buffer, 0, chunkSize) < 0)
@@ -68,11 +69,13 @@ namespace Sazzy
                             throw new Exception("Expected empty line but was " + line);
                         }
                         state = State.ChunkSize;
+                        break;
                     }
-                    else
+                    case State.Body:
                     {
                         sb.Append(stream.ReadToEnd(contentLength));
                         state = State.End;
+                        break;
                     }
                 }
             }
