@@ -51,15 +51,15 @@ namespace Sazzy
                         case State.Body when chunked:
                         {
                             var buffer = new byte[chunkSize];
-                            do
+
+                            while (chunkSize > 0)
                             {
                                 var read = stream.Read(buffer, 0, buffer.Length);
-                                if (read < 0)
-                                    throw new Exception("");
+                                if (read == 0)
+                                    throw new Exception("Unexpected end of HTTP content.");
                                 output.Write(buffer, 0, read);
                                 chunkSize -= read;
                             }
-                            while (chunkSize > 0);
 
                             var line = stream.ReadLine();
                             if (!string.IsNullOrEmpty(line))
@@ -73,15 +73,14 @@ namespace Sazzy
                         {
                             var buffer = new byte[contentLength];
 
-                            do
+                            while (contentLength > 0)
                             {
                                 var read = stream.Read(buffer, 0, buffer.Length);
-                                if (read < 0)
-                                    throw new Exception("");
+                                if (read == 0)
+                                    throw new Exception("Unexpected end of HTTP content.");
                                 output.Write(buffer, 0, read);
                                 contentLength -= read;
                             }
-                            while (contentLength > 0);
 
                             state = State.End;
                             break;
