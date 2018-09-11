@@ -21,21 +21,5 @@ namespace Sazzy
             }
             return result.ToString();
         }
-
-        public static string ReadToEnd(this Stream stream, int contentLength)
-        {
-            if (contentLength < 0)
-                throw new ArgumentOutOfRangeException();
-            if (!stream.CanRead || stream.Position == stream.Length)
-                return null;
-
-            var buffer = new byte[contentLength];
-            var result = new StringBuilder();
-
-            if (stream.Read(buffer, 0, contentLength) < 0)
-                throw new Exception("");
-            result.Append(Encoding.ASCII.GetString(buffer, 0, contentLength));
-            return result.ToString();
-        }
     }
 }

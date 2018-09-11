@@ -64,7 +64,14 @@ namespace Sazzy
                     }
                     case State.Body:
                     {
-                        sb.Append(stream.ReadToEnd(contentLength));
+                        var buffer = new byte[contentLength];
+                        var result = new StringBuilder();
+
+                        if (stream.Read(buffer, 0, contentLength) < 0)
+                            throw new Exception("");
+                        result.Append(Encoding.ASCII.GetString(buffer, 0, contentLength));
+                        sb.Append(result.ToString());
+
                         state = State.End;
                         break;
                     }
