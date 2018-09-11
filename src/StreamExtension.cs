@@ -10,7 +10,7 @@ namespace Sazzy
             if (!stream.CanRead || stream.Position == stream.Length)
                 return null;
 
-            StringBuilder result = new StringBuilder();
+            var result = new StringBuilder();
             int b;
             char character;
             while ((b = stream.ReadByte()) > 0 && ((character = (char) b) != '\n')) //TODO what if \n\r\n
@@ -27,8 +27,8 @@ namespace Sazzy
             if (!stream.CanRead || stream.Position == stream.Length)
                 return null;
 
-            byte[] buffer = new byte[contentLength];
-            StringBuilder result = new StringBuilder();
+            var buffer = new byte[contentLength];
+            var result = new StringBuilder();
 
             if (stream.Read(buffer, 0, contentLength) < 0)
                 throw new Exception("");

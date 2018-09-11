@@ -24,7 +24,7 @@ namespace Sazzy
                 {
                     case State.Headers:
                     {
-                        string line = stream.ReadLine();
+                        var line = stream.ReadLine();
                         if (string.IsNullOrEmpty(line))
                         {
                             if (chunked)
@@ -58,12 +58,12 @@ namespace Sazzy
                     }
                     case State.Body when chunked:
                     {
-                        byte[] buffer = new byte[chunkSize];
+                        var buffer = new byte[chunkSize];
                         if (stream.Read(buffer, 0, chunkSize) < 0)
                             throw new Exception("");
                         sb.Append(Encoding.ASCII.GetString(buffer, 0, chunkSize));
 
-                        string line = stream.ReadLine();
+                        var line = stream.ReadLine();
                         if (!string.IsNullOrEmpty(line))
                         {
                             throw new Exception("Expected empty line but was " + line);
