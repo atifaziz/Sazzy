@@ -9,7 +9,7 @@ namespace Sazzy
     {
         static void Main(string[] args)
         {
-            using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read))
+            using (var stream = File.OpenRead(args[0]))
             using (var output = Console.OpenStandardOutput())
                 CopyHttpContent(stream, output);
         }
