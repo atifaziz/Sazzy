@@ -27,14 +27,7 @@ namespace Sazzy
                         var line = stream.ReadLine();
                         if (string.IsNullOrEmpty(line))
                         {
-                            if (chunked)
-                            {
-                                state = State.ChunkSize;
-                            }
-                            else
-                            {
-                                state = State.Body;
-                            }
+                            state = chunked ? State.ChunkSize : State.Body;
                         }
                         else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
                         {
@@ -50,10 +43,7 @@ namespace Sazzy
                     case State.ChunkSize:
                     {
                         chunkSize = int.Parse(stream.ReadLine(), NumberStyles.HexNumber);
-                        if (chunkSize > 0)
-                            state = State.Body;
-                        else
-                            state = State.End;
+                        state = chunkSize > 0 ? State.Body : State.End;
                         break;
                     }
                     case State.Body when chunked:
