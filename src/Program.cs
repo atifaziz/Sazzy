@@ -16,64 +16,66 @@ namespace Sazzy
             var state = State.Headers;
             var chunkSize = 0;
             var contentLength = -1;
-            var stream = File.Open(args[0], FileMode.Open, FileAccess.Read);
             var sb = new StringBuilder();
 
-            while (state != State.End)
+            using (var stream = File.Open(args[0], FileMode.Open, FileAccess.Read))
             {
-                switch (state)
+                while (state != State.End)
                 {
-                    case State.Headers:
+                    switch (state)
                     {
-                        var line = stream.ReadLine();
-                        if (string.IsNullOrEmpty(line))
+                        case State.Headers:
                         {
-                            state = chunked ? State.ChunkSize : State.Body;
+                            var line = stream.ReadLine();
+                            if (string.IsNullOrEmpty(line))
+                            {
+                                state = chunked ? State.ChunkSize : State.Body;
+                            }
+                            else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
+                            {
+                                chunked = true;
+                            }
+                            else if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                contentLength = int.Parse(Regex.Match(line, @"(?<=Content-Length: )\d+$").Value);
+                            }
+
+                            break;
                         }
-                        else if (line.Equals("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase))
+                        case State.ChunkSize:
                         {
-                            chunked = true;
+                            chunkSize = int.Parse(stream.ReadLine(), NumberStyles.HexNumber);
+                            state = chunkSize > 0 ? State.Body : State.End;
+                            break;
                         }
-                        else if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                        case State.Body when chunked:
                         {
-                            contentLength = int.Parse(Regex.Match(line, @"(?<=Content-Length: )\d+$").Value);
+                            var buffer = new byte[chunkSize];
+                            if (stream.Read(buffer, 0, chunkSize) < 0)
+                                throw new Exception("");
+                            sb.Append(Encoding.ASCII.GetString(buffer, 0, chunkSize));
+
+                            var line = stream.ReadLine();
+                            if (!string.IsNullOrEmpty(line))
+                            {
+                                throw new Exception("Expected empty line but was " + line);
+                            }
+                            state = State.ChunkSize;
+                            break;
                         }
-
-                        break;
-                    }
-                    case State.ChunkSize:
-                    {
-                        chunkSize = int.Parse(stream.ReadLine(), NumberStyles.HexNumber);
-                        state = chunkSize > 0 ? State.Body : State.End;
-                        break;
-                    }
-                    case State.Body when chunked:
-                    {
-                        var buffer = new byte[chunkSize];
-                        if (stream.Read(buffer, 0, chunkSize) < 0)
-                            throw new Exception("");
-                        sb.Append(Encoding.ASCII.GetString(buffer, 0, chunkSize));
-
-                        var line = stream.ReadLine();
-                        if (!string.IsNullOrEmpty(line))
+                        case State.Body:
                         {
-                            throw new Exception("Expected empty line but was " + line);
+                            var buffer = new byte[contentLength];
+                            var result = new StringBuilder();
+
+                            if (stream.Read(buffer, 0, contentLength) < 0)
+                                throw new Exception("");
+                            result.Append(Encoding.ASCII.GetString(buffer, 0, contentLength));
+                            sb.Append(result.ToString());
+
+                            state = State.End;
+                            break;
                         }
-                        state = State.ChunkSize;
-                        break;
-                    }
-                    case State.Body:
-                    {
-                        var buffer = new byte[contentLength];
-                        var result = new StringBuilder();
-
-                        if (stream.Read(buffer, 0, contentLength) < 0)
-                            throw new Exception("");
-                        result.Append(Encoding.ASCII.GetString(buffer, 0, contentLength));
-                        sb.Append(result.ToString());
-
-                        state = State.End;
-                        break;
                     }
                 }
             }
