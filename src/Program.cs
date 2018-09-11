@@ -66,16 +66,7 @@ namespace Sazzy
                     }
                     case State.Body when chunked:
                     {
-                        var buffer = new byte[chunkSize];
-
-                        while (chunkSize > 0)
-                        {
-                            var read = input.Read(buffer, 0, buffer.Length);
-                            if (read == 0)
-                                throw new Exception("Unexpected end of HTTP content.");
-                            output.Write(buffer, 0, read);
-                            chunkSize -= read;
-                        }
+                        CopyBody(chunkSize);
 
                         var line = ReadLine(input);
                         if (!string.IsNullOrEmpty(line))
@@ -86,19 +77,23 @@ namespace Sazzy
                     }
                     case State.Body:
                     {
-                        var buffer = new byte[contentLength];
-
-                        while (contentLength > 0)
-                        {
-                            var read = input.Read(buffer, 0, buffer.Length);
-                            if (read == 0)
-                                throw new Exception("Unexpected end of HTTP content.");
-                            output.Write(buffer, 0, read);
-                            contentLength -= read;
-                        }
-
+                        CopyBody(contentLength);
                         return;
                     }
+                }
+            }
+
+            void CopyBody(int size)
+            {
+                var buffer = new byte[size];
+
+                while (size > 0)
+                {
+                    var read = input.Read(buffer, 0, buffer.Length);
+                    if (read == 0)
+                        throw new Exception("Unexpected end of HTTP content.");
+                    output.Write(buffer, 0, read);
+                    size -= read;
                 }
             }
 
