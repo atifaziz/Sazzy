@@ -4,7 +4,7 @@ namespace Sazzy
     using System.IO;
     using System.Text;
 
-    public static class StreamExtension
+    static class StreamExtension
     {
         public static string ReadLine(this Stream stream)
         {
