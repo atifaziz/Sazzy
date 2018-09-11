@@ -23,6 +23,7 @@ namespace Sazzy
             var state = State.Headers;
             var chunkSize = 0;
             var contentLength = -1;
+            var lineBuilder = new StringBuilder();
 
             while (true)
             {
@@ -96,15 +97,15 @@ namespace Sazzy
 
             string ReadLine(Stream stream)
             {
-                var result = new StringBuilder();
+                lineBuilder.Length = 0;
                 int b;
                 char character;
                 while ((b = stream.ReadByte()) >= 0 && (character = (char) b) != '\n')
                 {
                     if (character != '\r' && character != '\n')
-                        result.Append(character);
+                        lineBuilder.Append(character);
                 }
-                return result.ToString();
+                return lineBuilder.ToString();
             }
         }
     }
