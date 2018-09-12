@@ -29,7 +29,7 @@ namespace Sazzy
                 {
                     return new HttpContentStream(
                         input,
-                        chunked ? State.ReadChunkSize : State.Read,
+                        chunked ? State.ReadChunkSize : State.CopyAll,
                         new ReadOnlyCollection<KeyValuePair<string, string>>(headers),
                         contentLength, lineBuilder);
                 }
@@ -56,7 +56,6 @@ namespace Sazzy
 
         long _remainingLength;
         StringBuilder _lineBuilder;
-        ArraySegment<byte> _buffer;
 
         HttpContentStream(Stream input, State state,
                           IReadOnlyCollection<KeyValuePair<string, string>> headers,
@@ -98,7 +97,6 @@ namespace Sazzy
 
             _input.Close();
             _input = null;
-            _buffer = new ArraySegment<byte>();
             _lineBuilder = null;
         }
 
@@ -106,7 +104,7 @@ namespace Sazzy
 
         static readonly char[] Colon = { ':' };
 
-        enum State { Eoi, Read, Fill, ReadChunkSize, ReadChunk, FillChunk }
+        enum State { Eoi, CopyAll, CopyChunk, ReadChunkSize }
 
         public override int Read(byte[] buffer, int offset, int count) =>
             Read(This, ArraySegment.Create(buffer, offset, count));
@@ -122,77 +120,49 @@ namespace Sazzy
                     Free();
                     return result;
                 }
-                case State.Fill:
-                case State.FillChunk:
+                case State.CopyAll:
+                case State.CopyChunk:
                 {
-                    var count = Math.Min(_buffer.Count, destination.Count);
-                    Array.Copy(_buffer.Array, _buffer.Offset, destination.Array, destination.Offset, count);
+                    while (_remainingLength > 0)
+                    {
+                        var read =
+                            _input.Read(destination.Array, destination.Offset,
+                                (int) Math.Min(Math.Min(int.MaxValue, _remainingLength), destination.Count));
 
-                    result += count;
-                    _buffer = _buffer.Slice(count);
-                    destination = destination.Slice(count);
+                        result += read;
+                        _remainingLength -= read;
+                        destination = destination.Slice(read);
 
-                    if (_buffer.Count > destination.Count)
-                        return result;
+                        if (destination.Count == 0)
+                            return result;
+                    }
 
-                    if (_state == State.FillChunk)
-                        goto case State.ReadChunk;
+                    if (_state == State.CopyChunk)
+                    {
+                        if (ReadLine(_input).Length > 0)
+                            throw new Exception("Invalid HTTP chunked transfer encoding.");
+                        goto case State.ReadChunkSize;
+                    }
 
-                    if (_state == State.Fill)
-                        goto case State.Read;
-
-                    throw new Exception("Internal implementation error.");
-                }
-                case State.Read:
-                {
-                    if (Read(ref _remainingLength) == 0)
+                    if (_state == State.CopyAll)
                     {
                         _state = State.Eoi;
                         break;
                     }
 
-                    _state = State.Fill;
-                    break;
+                    throw new Exception("Internal implementation error.");
                 }
                 case State.ReadChunkSize:
                 {
                     var chunkSize = _remainingLength =
                         int.Parse(ReadLine(_input), NumberStyles.HexNumber);
 
-                    if (chunkSize == 0)
-                    {
-                        _state = State.Eoi;
-                        break;
-                    }
-
-                    goto case State.ReadChunk;
-                }
-                case State.ReadChunk:
-                {
-                    if (Read(ref _remainingLength) == 0)
-                    {
-                        if (ReadLine(_input).Length > 0)
-                            throw new Exception("Invalid HTTP chunked transfer encoding.");
-
-                        goto case State.ReadChunkSize;
-                    }
-
-                    _state = State.FillChunk;
+                    _state = chunkSize == 0 ? State.Eoi : State.CopyChunk;
                     break;
                 }
             }
 
             goto loop;
-
-            int Read(ref long remainder)
-            {
-                if (_buffer.Array == null)
-                    _buffer = ArraySegment.Create(new byte[4096], 0, 0);
-                var count = _input.Read(_buffer.Array, 0, (int) Math.Min(remainder, _buffer.Array.Length));
-                _buffer = _buffer.WithOffset(0).WithCount(count);
-                remainder -= count;
-                return count;
-            }
         }
 
         string ReadLine(Stream stream) => ReadLine(stream, _lineBuilder);
