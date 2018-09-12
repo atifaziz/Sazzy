@@ -1,4 +1,4 @@
-namespace Sazzy
+namespace Sazzy.Sample
 {
     using System;
     using System.IO;

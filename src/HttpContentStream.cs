@@ -7,7 +7,7 @@ namespace Sazzy
     using System.IO;
     using System.Text;
 
-    sealed class HttpContentStream : Stream
+    public sealed class HttpContentStream : Stream
     {
         public static HttpContentStream Open(Stream input)
         {
