@@ -6,7 +6,9 @@ namespace Sazzy
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Text;
+    using System.Text.RegularExpressions;
 
     public sealed class HttpMessage : IDisposable
     {
@@ -26,7 +28,23 @@ namespace Sazzy
             var headers = new List<KeyValuePair<string, string>>();
             var lineBuilder = new StringBuilder();
 
-            StartLine = ReadLine(input, lineBuilder);
+            var startLine = StartLine = ReadLine(input, lineBuilder).Trim();
+
+            var match = Regex.Match(startLine, @"^HTTP/([1-9]\.[0-9])\x20+([1-5][0-9]{2})\x20+(.+)");
+            if (match.Success)
+            {
+                var groups = match.Groups;
+                HttpVersion = new Version(groups[1].Value);
+                StatusCode = (HttpStatusCode) int.Parse(groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture);
+                ReasonPhrase = groups[3].Value;
+            }
+            else if ((match = Regex.Match(startLine, @"^([A-Za-z]+)\x20+[^\x20]+\x20+HTTP/([1-9]\.[0-9])")).Success)
+            {
+                var groups = match.Groups;
+                RequestMethod = groups[1].Value;
+                RequestUrl = new Uri(groups[2].Value, UriKind.Relative);
+                HttpVersion = new Version(groups[3].Value);
+            }
 
             while (true)
             {
@@ -55,7 +73,19 @@ namespace Sazzy
                 ContentLength, lineBuilder);
         }
 
-        public string StartLine { get; }
+        public string StartLine          { get; }
+
+        public bool IsRequest            => RequestUrl != null;
+        public bool IsResponse           => !IsRequest;
+
+        public Version HttpVersion       { get; }
+
+        public string RequestMethod      { get; }
+        public Uri RequestUrl            { get; }
+
+        public HttpStatusCode StatusCode { get; }
+        public string ReasonPhrase       { get; }
+
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; }
 
         Dictionary<string, string> _headerByName;

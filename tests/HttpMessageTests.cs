@@ -2,6 +2,7 @@ namespace Sazzy.Tests
 {
     using System;
     using System.IO;
+    using System.Net;
     using System.Text;
     using NUnit.Framework;
     using Sazzy;
@@ -38,7 +39,14 @@ namespace Sazzy.Tests
             var input = new MemoryStream(ascii.GetBytes(response));
             var hs = new HttpMessage(input);
 
+            Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
+            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
+
+            Assert.That(hs.RequestUrl, Is.Null);
+            Assert.That(hs.RequestMethod, Is.Null);
 
             Assert.That(hs.Headers.Count, Is.EqualTo(2));
 
