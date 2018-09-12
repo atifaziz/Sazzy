@@ -37,6 +37,9 @@ namespace Sazzy.Tests
             var ascii = Encoding.ASCII;
             var input = new MemoryStream(ascii.GetBytes(response));
             var hs = HttpContentStream.Open(input);
+
+            Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
+
             var output = new MemoryStream();
             hs.CopyTo(output);
             var content = ascii.GetString(output.ToArray());

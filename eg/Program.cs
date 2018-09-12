@@ -9,6 +9,8 @@ namespace Sazzy.Sample
         {
             using (var input = HttpContentStream.Open(File.OpenRead(args[0])))
             {
+                Console.Error.WriteLine(input.StartLine);
+
                 foreach (var (name, value) in input.Headers)
                     Console.Error.WriteLine(name + ": " + value);
 

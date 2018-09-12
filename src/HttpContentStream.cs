@@ -21,6 +21,8 @@ namespace Sazzy
             var headers = new List<KeyValuePair<string, string>>();
             var lineBuilder = new StringBuilder();
 
+            var startLine = ReadLine(input, lineBuilder);
+
             while (true)
             {
                 var line = ReadLine(input, lineBuilder);
@@ -30,7 +32,7 @@ namespace Sazzy
                     return new HttpContentStream(
                         input,
                         chunked ? State.ReadChunkSize : State.CopyAll,
-                        new ReadOnlyCollection<KeyValuePair<string, string>>(headers),
+                        startLine, new ReadOnlyCollection<KeyValuePair<string, string>>(headers),
                         contentLength, lineBuilder);
                 }
 
@@ -58,10 +60,12 @@ namespace Sazzy
         StringBuilder _lineBuilder;
 
         HttpContentStream(Stream input, State state,
+                          string startLine,
                           IReadOnlyCollection<KeyValuePair<string, string>> headers,
                           long? length,
                           StringBuilder lineBuilder)
         {
+            StartLine = startLine;
             _input = input;
             _state = state;
             _headers = headers;
@@ -71,6 +75,8 @@ namespace Sazzy
 
         T Return<T>(T value) =>
             !_disposed ? value : throw new ObjectDisposedException(nameof(HttpContentStream));
+
+        public string StartLine { get; }
 
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers =>
             This._headers;
