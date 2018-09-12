@@ -5,6 +5,7 @@ namespace Sazzy
     using System.Collections.ObjectModel;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Text;
 
     public sealed class HttpMessage : IDisposable
@@ -56,6 +57,23 @@ namespace Sazzy
 
         public string StartLine { get; }
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; }
+
+        Dictionary<string, string> _headerByName;
+
+        public string this[string header]
+        {
+            get
+            {
+                if (_headerByName == null)
+                {
+                    _headerByName =
+                        Headers.GroupBy(e => e.Key, e => e.Value, StringComparer.OrdinalIgnoreCase)
+                               .ToDictionary(g => g.Key, g => g.Last(), StringComparer.OrdinalIgnoreCase);
+                }
+
+                return _headerByName.TryGetValue(header, out var value) ? value : null;
+            }
+        }
 
         public long? ContentLength { get; }
 
