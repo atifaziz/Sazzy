@@ -120,7 +120,7 @@ namespace Sazzy
                 case State.Eoi:
                 {
                     Free();
-                    return 0;
+                    return result;
                 }
                 case State.Fill:
                 case State.FillChunk:
