@@ -188,9 +188,10 @@ namespace Sazzy
             {
                 if (_buffer.Array == null)
                     _buffer = ArraySegment.Create(new byte[4096], 0, 0);
-                _buffer = _buffer.WithCount(_input.Read(_buffer.Array, 0, (int) Math.Min(remainder, _buffer.Array.Length)));
-                remainder -= _buffer.Count;
-                return _buffer.Count;
+                var count = _input.Read(_buffer.Array, 0, (int) Math.Min(remainder, _buffer.Array.Length));
+                _buffer = _buffer.WithOffset(0).WithCount(count);
+                remainder -= count;
+                return count;
             }
         }
 
