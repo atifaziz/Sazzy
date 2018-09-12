@@ -7,15 +7,16 @@ namespace Sazzy.Sample
     {
         static void Main(string[] args)
         {
-            using (var input = HttpContentStream.Open(File.OpenRead(args[0])))
+            using (var input = File.OpenRead(args[0]))
+            using (var message = new HttpMessage(input))
             {
-                Console.Error.WriteLine(input.StartLine);
+                Console.Error.WriteLine(message.StartLine);
 
-                foreach (var (name, value) in input.Headers)
+                foreach (var (name, value) in message.Headers)
                     Console.Error.WriteLine(name + ": " + value);
 
                 using (var output = Console.OpenStandardOutput())
-                    input.CopyTo(output);
+                    message.ContentStream.CopyTo(output);
             }
         }
     }

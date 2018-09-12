@@ -6,13 +6,13 @@ namespace Sazzy.Tests
     using NUnit.Framework;
     using Sazzy;
 
-    public class HttpContentStreamTests
+    public class HttpMessageTests
     {
         [Test]
-        public void OpenWithNullStream()
+        public void InitWithNullStream()
         {
             var e = Assert.Throws<ArgumentNullException>(() =>
-                HttpContentStream.Open(null));
+                new HttpMessage(null));
             Assert.That(e.ParamName, Is.EqualTo("input"));
         }
 
@@ -36,7 +36,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             var input = new MemoryStream(ascii.GetBytes(response));
-            var hs = HttpContentStream.Open(input);
+            var hs = new HttpMessage(input);
 
             Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
 
@@ -56,7 +56,7 @@ namespace Sazzy.Tests
             }
 
             var output = new MemoryStream();
-            hs.CopyTo(output);
+            hs.ContentStream.CopyTo(output);
             var content = ascii.GetString(output.ToArray());
 
             Assert.That(content, Is.EqualTo("MozillaDeveloperNetwork"));
