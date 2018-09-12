@@ -40,6 +40,21 @@ namespace Sazzy.Tests
 
             Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
 
+            Assert.That(hs.Headers.Count, Is.EqualTo(2));
+
+            using (var h = hs.Headers.GetEnumerator())
+            {
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
+                Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
+
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Transfer-Encoding"));
+                Assert.That(h.Current.Value, Is.EqualTo("chunked"));
+
+                Assert.That(h.MoveNext(), Is.False);
+            }
+
             var output = new MemoryStream();
             hs.CopyTo(output);
             var content = ascii.GetString(output.ToArray());

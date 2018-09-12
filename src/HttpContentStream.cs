@@ -39,13 +39,13 @@ namespace Sazzy
                 var pair = line.Split(Colon, 2);
                 if (pair.Length > 1)
                 {
-                    var (header, value) = (pair[0].Trim(), pair[1]);
+                    var (header, value) = (pair[0].Trim(Whitespace), pair[1].Trim(Whitespace));
                     headers.Add(new KeyValuePair<string, string>(header, value));
 
                     if ("Transfer-Encoding".Equals(header, StringComparison.OrdinalIgnoreCase))
-                        chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                        chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
                     else if ("Content-Length".Equals(header, StringComparison.OrdinalIgnoreCase))
-                        contentLength = long.Parse(value, NumberStyles.Integer & ~NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+                        contentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
                 }
             }
         }
@@ -109,6 +109,7 @@ namespace Sazzy
         HttpContentStream This => Return(this);
 
         static readonly char[] Colon = { ':' };
+        static readonly char[] Whitespace = { '\x20', '\t' };
 
         enum State { Eoi, CopyAll, CopyChunk, ReadChunkSize }
 
