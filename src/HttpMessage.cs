@@ -69,22 +69,27 @@ namespace Sazzy
                 if (string.IsNullOrEmpty(line))
                     break;
 
-                string[] pair;
-
-                if (line[0] == ' ' || line[0] == '\t')
+                if (headers.Count > 0 && line[0] == ' ' || line[0] == '\t')
                 {
                     var header = headers.Pop();
                     headers.Add(new KeyValuePair<string, string>(header.Key, header.Value + line));
                 }
-                else if ((pair = line.Split(Colon, 2)).Length > 1)
+                else
                 {
-                    var (header, value) = (pair[0].Trim(Whitespace), pair[1].Trim(Whitespace));
-                    headers.Add(new KeyValuePair<string, string>(header, value));
+                    var pair = line.Split(Colon, 2);
+                    if (pair.Length != 2)
+                        continue;
 
-                    if ("Transfer-Encoding".Equals(header, StringComparison.OrdinalIgnoreCase))
-                        chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
-                    else if ("Content-Length".Equals(header, StringComparison.OrdinalIgnoreCase))
-                        ContentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
+                    var (name, value) = (pair[0].Trim(Whitespace), pair[1].Trim(Whitespace));
+                    headers.Add(new KeyValuePair<string, string>(name, value));
+
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
+                            chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
+                        else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
+                            ContentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
+                    }
                 }
             }
 

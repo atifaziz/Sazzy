@@ -71,6 +71,52 @@ namespace Sazzy.Tests
         }
 
         [Test]
+        public void HeaderValuesAreOptional()
+        {
+            const string crlf = "\r\n";
+            const string response
+                = "HTTP/1.1 200 OK" + crlf
+                + "Content-Type: text/plain" + crlf
+                + "Content-Length:" + crlf
+                + "Content-Length: 0" + crlf
+                + crlf;
+
+            var ascii = Encoding.ASCII;
+            var input = new MemoryStream(ascii.GetBytes(response));
+            var hs = new HttpMessage(input);
+
+            Assert.That(hs.IsResponse, Is.True);
+            Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
+            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
+
+            Assert.That(hs.RequestUrl, Is.Null);
+            Assert.That(hs.RequestMethod, Is.Null);
+
+            Assert.That(hs.Headers.Count, Is.EqualTo(3));
+
+            using (var h = hs.Headers.GetEnumerator())
+            {
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
+                Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
+
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
+                Assert.That(h.Current.Value, Is.EqualTo(string.Empty));
+
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
+                Assert.That(h.Current.Value, Is.EqualTo("0"));
+
+                Assert.That(h.MoveNext(), Is.False);
+            }
+
+            Assert.That(hs.ContentLength, Is.EqualTo(0));
+        }
+
+        [Test]
         public void HeaderFolding()
         {
             const string crlf = "\r\n";
