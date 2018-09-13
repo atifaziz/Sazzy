@@ -66,6 +66,10 @@ namespace Sazzy
                 var version = groups[3].Value;
                 sink.OnRequestLine(method, url, version);
             }
+            else
+            {
+                throw new FormatException("Invalid HTTP request line or status response:" + startLine);
+            }
 
             while (true)
             {
