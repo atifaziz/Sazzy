@@ -24,86 +24,73 @@ namespace Sazzy
     using System.Linq;
     using System.Net;
     using System.Text;
-    using System.Text.RegularExpressions;
 
     public sealed class HttpMessage : IDisposable
     {
-        static readonly char[] Colon = { ':' };
-        static readonly char[] Whitespace = { '\x20', '\t' };
-
         Stream _contentStream;
 
         public HttpMessage(Stream input)
         {
-            if (input == null) throw new ArgumentNullException(nameof(input));
-
-            if (!input.CanRead)
-                throw new ArgumentException(null, nameof(input));
-
+            Version version = null;
+            string requestMethod = null;
+            Uri requestUrl = null;
+            HttpStatusCode responseStatusCode = 0;
+            string responseReasonPhrase = null;
+            long? contentLength = null;
             var chunked = false;
             var headers = new List<KeyValuePair<string, string>>();
-            var lineBuilder = new StringBuilder();
 
-            var startLine = StartLine = ReadLine(input, lineBuilder).Trim();
-
-            var match = Regex.Match(startLine, @"^HTTP/([1-9]\.[0-9])\x20+([1-5][0-9]{2})\x20+(.+)");
-            if (match.Success)
+            void OnRequestLine(string method, string url, string protocolVersion)
             {
-                var groups = match.Groups;
-                HttpVersion = new Version(groups[1].Value);
-                StatusCode = (HttpStatusCode) int.Parse(groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture);
-                ReasonPhrase = groups[3].Value;
-            }
-            else if ((match = Regex.Match(startLine, @"^([A-Za-z]+)\x20+([^\x20]+)\x20+HTTP/([1-9]\.[0-9])")).Success)
-            {
-                var groups = match.Groups;
-                RequestMethod = groups[1].Value;
-                RequestUrl = new Uri(groups[2].Value, UriKind.Relative);
-                HttpVersion = new Version(groups[3].Value);
+                version = new Version(protocolVersion);
+                requestMethod = method;
+                requestUrl = new Uri(url, UriKind.RelativeOrAbsolute);
             }
 
-            while (true)
+            void OnResponseLine(string protocolVersion, int statusCode, string reasonPhrase)
             {
-                var line = ReadLine(input, lineBuilder);
+                version = new Version(protocolVersion);
+                responseStatusCode = (HttpStatusCode) statusCode;
+                responseReasonPhrase = reasonPhrase;
+            }
 
-                if (string.IsNullOrEmpty(line))
-                    break;
+            void OnHeader(string name, string value)
+            {
+                headers.Add(new KeyValuePair<string, string>(name, value));
 
-                if (headers.Count > 0 && line[0] == ' ' || line[0] == '\t')
+                if (!string.IsNullOrEmpty(value))
                 {
-                    var header = headers.Pop();
-                    headers.Add(new KeyValuePair<string, string>(header.Key, header.Value + line));
-                }
-                else
-                {
-                    var pair = line.Split(Colon, 2);
-                    if (pair.Length != 2)
-                        continue;
-
-                    var (name, value) = (pair[0].Trim(Whitespace), pair[1].Trim(Whitespace));
-                    headers.Add(new KeyValuePair<string, string>(name, value));
-
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
-                            chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
-                        else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
-                            ContentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
-                    }
+                    if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
+                        chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
+                    else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
+                        contentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
                 }
             }
 
-            Headers = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
-            _contentStream = new HttpContentStream(
-                input,
-                chunked ? State.ReadChunkSize : State.CopyAll,
-                ContentLength, lineBuilder);
+            HttpMessagePrologueParser.Parse(input,
+                HttpMessagePrologueParser.CreateDelegatingSink(
+                    OnRequestLine,
+                    OnResponseLine,
+                    OnHeader));
+
+            HttpVersion    = version;
+            RequestMethod  = requestMethod;
+            RequestUrl     = requestUrl;
+            StatusCode     = responseStatusCode;
+            ReasonPhrase   = responseReasonPhrase;
+            Headers        = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
+            ContentLength  = contentLength;
+            _contentStream = new HttpContentStream(input,
+                                                   chunked ? State.ReadChunkSize : State.CopyAll,
+                                                   ContentLength);
         }
 
-        public string StartLine          { get; }
+        public bool IsRequest      => RequestUrl != null;
+        public bool IsResponse     => !IsRequest;
 
-        public bool IsRequest            => RequestUrl != null;
-        public bool IsResponse           => !IsRequest;
+        public string StartLine    => ResponseLine ?? RequestLine;
+        public string RequestLine  => IsRequest  ? string.Join(" ", RequestMethod, RequestUrl.OriginalString, "HTTP/" + HttpVersion) : null;
+        public string ResponseLine => IsResponse ? string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion) : null;
 
         public Version HttpVersion       { get; }
 
@@ -175,14 +162,14 @@ namespace Sazzy
             long _remainingLength;
             StringBuilder _lineBuilder;
 
-            public HttpContentStream(Stream input, State state,
-                                     long? length, StringBuilder lineBuilder)
+            public HttpContentStream(Stream input, State state, long? length)
             {
                 _input = input;
                 _state = state;
                 _remainingLength = (_contentLength = length) ?? 0;
-                _lineBuilder = lineBuilder;
             }
+
+            StringBuilder LineBuilder => _lineBuilder ?? (_lineBuilder = new StringBuilder());
 
             T Return<T>(T value) =>
                 !_disposed ? value : throw new ObjectDisposedException(nameof(HttpContentStream));
@@ -271,7 +258,7 @@ namespace Sazzy
                 goto loop;
             }
 
-            string ReadLine() => HttpMessage.ReadLine(_input, _lineBuilder);
+            string ReadLine() => HttpMessage.ReadLine(_input, LineBuilder);
 
             #region Unsupported members
 

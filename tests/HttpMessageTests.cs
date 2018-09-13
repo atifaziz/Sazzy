@@ -40,7 +40,6 @@ namespace Sazzy.Tests
             var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
-            Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
@@ -86,7 +85,6 @@ namespace Sazzy.Tests
             var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
-            Assert.That(hs.StartLine, Is.EqualTo("HTTP/1.1 200 OK"));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
