@@ -21,7 +21,7 @@ namespace Sazzy.Sample
 
     static class Program
     {
-        static void Main(string[] args)
+        static void Wain(string[] args)
         {
             using (var input = File.OpenRead(args[0]))
             using (var message = new HttpMessage(input))
@@ -33,6 +33,20 @@ namespace Sazzy.Sample
 
                 using (var output = Console.OpenStandardOutput())
                     message.ContentStream.CopyTo(output);
+            }
+        }
+
+        static int Main(string[] args)
+        {
+            try
+            {
+                Wain(args);
+                return 0;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return 0xbad;
             }
         }
     }
