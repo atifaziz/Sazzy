@@ -23,7 +23,11 @@ namespace Sazzy.Sample
     {
         static void Wain(string[] args)
         {
-            using (var input = File.OpenRead(args[0]))
+            var arg = args.Length > 0
+                    ? args[0]
+                    : throw new Exception("Missing file specification.");
+
+            using (var input = File.OpenRead(arg))
             using (var message = new HttpMessage(input))
             {
                 Console.Error.WriteLine(message.StartLine);
