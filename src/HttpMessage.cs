@@ -54,7 +54,7 @@ namespace Sazzy
                 StatusCode = (HttpStatusCode) int.Parse(groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture);
                 ReasonPhrase = groups[3].Value;
             }
-            else if ((match = Regex.Match(startLine, @"^([A-Za-z]+)\x20+[^\x20]+\x20+HTTP/([1-9]\.[0-9])")).Success)
+            else if ((match = Regex.Match(startLine, @"^([A-Za-z]+)\x20+([^\x20]+)\x20+HTTP/([1-9]\.[0-9])")).Success)
             {
                 var groups = match.Groups;
                 RequestMethod = groups[1].Value;
