@@ -69,8 +69,14 @@ namespace Sazzy
                 if (string.IsNullOrEmpty(line))
                     break;
 
-                var pair = line.Split(Colon, 2);
-                if (pair.Length > 1)
+                string[] pair;
+
+                if (line[0] == ' ' || line[0] == '\t')
+                {
+                    var header = headers.Pop();
+                    headers.Add(new KeyValuePair<string, string>(header.Key, header.Value + line));
+                }
+                else if ((pair = line.Split(Colon, 2)).Length > 1)
                 {
                     var (header, value) = (pair[0].Trim(Whitespace), pair[1].Trim(Whitespace));
                     headers.Add(new KeyValuePair<string, string>(header, value));

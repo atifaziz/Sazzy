@@ -69,5 +69,50 @@ namespace Sazzy.Tests
 
             Assert.That(content, Is.EqualTo("MozillaDeveloperNetwork"));
         }
+
+        [Test]
+        public void HeaderFolding()
+        {
+            const string crlf = "\r\n";
+
+            var ua = new[]
+            {
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0)",
+                " \t \t Gecko/20100101 ",
+                "\t \t Firefox/42.0",
+            };
+
+            var request
+                = "GET / HTTP/1.1 200 OK" + crlf
+                + "User-Agent: " + string.Join(crlf, ua) + crlf
+                + "Host: www.example.com" + crlf
+                + crlf;
+
+            var ascii = Encoding.ASCII;
+            var input = new MemoryStream(ascii.GetBytes(request));
+            var hs = new HttpMessage(input);
+
+            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo("/"));
+            Assert.That(hs.RequestMethod, Is.EqualTo("GET"));
+
+            Assert.That(hs.StatusCode, Is.EqualTo((HttpStatusCode) 0));
+            Assert.That(hs.ReasonPhrase, Is.Null);
+
+            Assert.That(hs.Headers.Count, Is.EqualTo(2));
+
+            using (var h = hs.Headers.GetEnumerator())
+            {
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("User-Agent"));
+                Assert.That(h.Current.Value, Is.EqualTo(string.Join(string.Empty, ua)));
+
+                Assert.That(h.MoveNext(), Is.True);
+                Assert.That(h.Current.Key, Is.EqualTo("Host"));
+                Assert.That(h.Current.Value, Is.EqualTo("www.example.com"));
+
+                Assert.That(h.MoveNext(), Is.False);
+            }
+        }
     }
 }

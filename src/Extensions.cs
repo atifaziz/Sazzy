@@ -16,6 +16,7 @@
 
 namespace Sazzy
 {
+    using System;
     using System.Collections.Generic;
 
     static partial class Extensions
@@ -25,5 +26,16 @@ namespace Sazzy
                 this KeyValuePair<TKey, TValue> pair,
                 out TKey key, out TValue value) =>
             (key, value) = (pair.Key, pair.Value);
+
+        public static T Pop<T>(this IList<T> list)
+        {
+            if (list == null) throw new ArgumentNullException(nameof(list));
+            var index = list.Count - 1;
+            if (index < 0)
+                throw new InvalidOperationException();
+            var result = list[index];
+            list.RemoveAt(index);
+            return result;
+        }
     }
 }
