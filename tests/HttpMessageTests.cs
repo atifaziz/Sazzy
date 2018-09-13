@@ -25,7 +25,7 @@ namespace Sazzy.Tests
                 = "HTTP/1.1 200 OK" + crlf
                 + "Content-Type: text/plain" + crlf
                 + "Transfer-Encoding: chunked" + crlf
-                + "" + crlf
+                + crlf
                 + "7" + crlf
                 + "Mozilla" + crlf
                 + "9" + crlf
