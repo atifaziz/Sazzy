@@ -159,14 +159,14 @@ namespace Sazzy
             bool _disposed;
             readonly long? _contentLength;
 
-            long _remainingLength;
+            long? _remainingLength;
             StringBuilder _lineBuilder;
 
             public HttpContentStream(Stream input, State state, long? length)
             {
                 _input = input;
                 _state = state;
-                _remainingLength = (_contentLength = length) ?? 0;
+                _remainingLength = _contentLength = length;
             }
 
             StringBuilder LineBuilder => _lineBuilder ?? (_lineBuilder = new StringBuilder());
@@ -216,15 +216,21 @@ namespace Sazzy
                     case State.CopyAll:
                     case State.CopyChunk:
                     {
-                        while (_remainingLength > 0)
+                        while (_remainingLength > 0 || _remainingLength == null)
                         {
-                            var read =
-                                _input.Read(destination.Array, destination.Offset,
-                                    (int) Math.Min(Math.Min(int.MaxValue, _remainingLength), destination.Count));
+                            var count = (int) Math.Min(_remainingLength is long n
+                                                       ? Math.Min(int.MaxValue, n)
+                                                       : int.MaxValue,
+                                                       destination.Count);
+
+                            var read = _input.Read(destination.Array, destination.Offset, count);
 
                             result += read;
                             _remainingLength -= read;
                             destination = destination.Slice(read);
+
+                            if (read == 0)
+                                break;
 
                             if (destination.Count == 0)
                                 return result;
