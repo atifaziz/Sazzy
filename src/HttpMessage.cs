@@ -30,6 +30,7 @@ namespace Sazzy
     public sealed class HttpMessage : IDisposable
     {
         Stream _contentStream;
+        bool _isContentStreamDisowned;
 
         public HttpMessage(Stream input) :
             this(input, null) {}
@@ -139,6 +140,8 @@ namespace Sazzy
 
         bool IsDisposed => ContentStream == null;
 
+        public void DisownContentStream() => _isContentStreamDisowned = true;
+
         public void Dispose()
         {
             if (IsDisposed)
@@ -146,7 +149,8 @@ namespace Sazzy
 
             var stream = _contentStream;
             _contentStream = null;
-            stream.Close();
+            if (!_isContentStreamDisowned)
+                stream.Close();
         }
 
         static string ReadLine(Stream stream, StringBuilder lineBuilder)
@@ -198,10 +202,11 @@ namespace Sazzy
             public override long Length =>
                 This._contentLength is long n ? n : throw new NotSupportedException();
 
-            public override void Close()
+            protected override void Dispose(bool disposing)
             {
                 _disposed = true;
-                Free();
+                if (disposing)
+                    Free();
             }
 
             void Free()
