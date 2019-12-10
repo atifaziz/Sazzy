@@ -169,7 +169,7 @@ namespace Sazzy
                 _remainingLength = _contentLength = length;
             }
 
-            StringBuilder LineBuilder => _lineBuilder ?? (_lineBuilder = new StringBuilder());
+            StringBuilder LineBuilder => _lineBuilder ??= new StringBuilder();
 
             T Return<T>(T value) =>
                 !_disposed ? value : throw new ObjectDisposedException(nameof(HttpContentStream));
