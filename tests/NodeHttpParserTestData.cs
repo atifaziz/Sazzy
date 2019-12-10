@@ -1251,7 +1251,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("NO_CONTENT_LENGTH_RESPONSE",
-                ignore: "Pending fix.",
                 /* The client should wait for the server's EOF. That is, when content-length
                  * is not specified, and "Connection: close", the end of body is specified
                  * by the EOF.
@@ -1352,7 +1351,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("NO_CARRIAGE_RET",
-                ignore: "Pending fix.",
                 name: "no carriage ret",
                 raw: "HTTP/1.1 200 OK\n"
                     + "Content-Type: text/html; charset=utf-8\n"
@@ -1528,7 +1526,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("NO_CONTENT_LENGTH_NO_TRANSFER_ENCODING_RESPONSE",
-                ignore: "Pending fix.",
                 /* The client should wait for the server's EOF. That is, when neither
                  * content-length nor transfer-encoding is specified, the end of body
                  * is specified by the EOF.
@@ -1820,7 +1817,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("HTTP_200_RESPONSE_WITH_UPGRADE_HEADER",
-                ignore: "Pending fix.",
                 name: "HTTP 200 response with Upgrade header",
                 raw: "HTTP/1.1 200 OK\r\n"
                     + "Connection: upgrade\r\n"
