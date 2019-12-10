@@ -97,7 +97,7 @@ namespace Sazzy
                         continue;
 
                     headerName = pair[0].Trim(Whitespace);
-                    headerValue = pair[1].Trim(Whitespace);
+                    headerValue = pair[1].TrimStart(Whitespace);
                 }
             }
 

@@ -1060,7 +1060,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("CONNECTION_MULTI_LWS_CRLF",
-                ignore: "Pending review.",
                 name: "multiple connection header values with folding and lws",
                 raw: "GET /demo HTTP/1.1\r\n"
                     + "Connection: keep-alive, \r\n upgrade\r\n"
