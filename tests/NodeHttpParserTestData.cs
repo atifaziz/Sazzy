@@ -1515,7 +1515,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("HTTP_VERSION_0_9",
-                ignore: "Pending review/fix.",
                 /* Should handle HTTP/0.9 */
                 name: "http version 0.9",
                 raw: "HTTP/0.9 200 OK\r\n"
