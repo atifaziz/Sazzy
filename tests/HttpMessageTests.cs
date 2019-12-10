@@ -128,7 +128,7 @@ namespace Sazzy.Tests
             };
 
             var request
-                = "GET / HTTP/1.1 200 OK" + crlf
+                = "GET / HTTP/1.1" + crlf
                 + "User-Agent: " + string.Join(crlf, ua) + crlf
                 + "Host: www.example.com" + crlf
                 + crlf;
