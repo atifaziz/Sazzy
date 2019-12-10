@@ -36,8 +36,8 @@ namespace Sazzy.Tests
                 + crlf;
 
             var ascii = Encoding.ASCII;
-            var input = new MemoryStream(ascii.GetBytes(response));
-            var hs = new HttpMessage(input);
+            using var input = new MemoryStream(ascii.GetBytes(response));
+            using var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
@@ -49,20 +49,19 @@ namespace Sazzy.Tests
 
             Assert.That(hs.Headers.Count, Is.EqualTo(2));
 
-            using (var h = hs.Headers.GetEnumerator())
-            {
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
-                Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
+            using var h = hs.Headers.GetEnumerator();
 
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Transfer-Encoding"));
-                Assert.That(h.Current.Value, Is.EqualTo("chunked"));
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
+            Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
 
-                Assert.That(h.MoveNext(), Is.False);
-            }
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Transfer-Encoding"));
+            Assert.That(h.Current.Value, Is.EqualTo("chunked"));
 
-            var output = new MemoryStream();
+            Assert.That(h.MoveNext(), Is.False);
+
+            using var output = new MemoryStream();
             hs.ContentStream.CopyTo(output);
             var content = ascii.GetString(output.ToArray());
 
@@ -81,8 +80,8 @@ namespace Sazzy.Tests
                 + crlf;
 
             var ascii = Encoding.ASCII;
-            var input = new MemoryStream(ascii.GetBytes(response));
-            var hs = new HttpMessage(input);
+            using var input = new MemoryStream(ascii.GetBytes(response));
+            using var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
@@ -94,22 +93,21 @@ namespace Sazzy.Tests
 
             Assert.That(hs.Headers.Count, Is.EqualTo(3));
 
-            using (var h = hs.Headers.GetEnumerator())
-            {
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
-                Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
+            using var h = hs.Headers.GetEnumerator();
 
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
-                Assert.That(h.Current.Value, Is.EqualTo(string.Empty));
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Content-Type"));
+            Assert.That(h.Current.Value, Is.EqualTo("text/plain"));
 
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
-                Assert.That(h.Current.Value, Is.EqualTo("0"));
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
+            Assert.That(h.Current.Value, Is.EqualTo(string.Empty));
 
-                Assert.That(h.MoveNext(), Is.False);
-            }
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Content-Length"));
+            Assert.That(h.Current.Value, Is.EqualTo("0"));
+
+            Assert.That(h.MoveNext(), Is.False);
 
             Assert.That(hs.ContentLength, Is.EqualTo(0));
         }
@@ -133,8 +131,8 @@ namespace Sazzy.Tests
                 + crlf;
 
             var ascii = Encoding.ASCII;
-            var input = new MemoryStream(ascii.GetBytes(request));
-            var hs = new HttpMessage(input);
+            using var input = new MemoryStream(ascii.GetBytes(request));
+            using var hs = new HttpMessage(input);
 
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo("/"));
@@ -145,18 +143,17 @@ namespace Sazzy.Tests
 
             Assert.That(hs.Headers.Count, Is.EqualTo(2));
 
-            using (var h = hs.Headers.GetEnumerator())
-            {
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("User-Agent"));
-                Assert.That(h.Current.Value, Is.EqualTo(string.Join(string.Empty, ua)));
+            using var h = hs.Headers.GetEnumerator();
 
-                Assert.That(h.MoveNext(), Is.True);
-                Assert.That(h.Current.Key, Is.EqualTo("Host"));
-                Assert.That(h.Current.Value, Is.EqualTo("www.example.com"));
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("User-Agent"));
+            Assert.That(h.Current.Value, Is.EqualTo(string.Join(string.Empty, ua)));
 
-                Assert.That(h.MoveNext(), Is.False);
-            }
+            Assert.That(h.MoveNext(), Is.True);
+            Assert.That(h.Current.Key, Is.EqualTo("Host"));
+            Assert.That(h.Current.Value, Is.EqualTo("www.example.com"));
+
+            Assert.That(h.MoveNext(), Is.False);
         }
     }
 }

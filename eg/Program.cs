@@ -27,17 +27,16 @@ namespace Sazzy.Sample
                     ? args[0]
                     : throw new Exception("Missing file specification.");
 
-            using (var input = File.OpenRead(arg))
-            using (var message = new HttpMessage(input))
-            {
-                Console.Error.WriteLine(message.StartLine);
+            using var input = File.OpenRead(arg);
+            using var message = new HttpMessage(input);
 
-                foreach (var (name, value) in message.Headers)
-                    Console.Error.WriteLine(name + ": " + value);
+            Console.Error.WriteLine(message.StartLine);
 
-                using (var output = Console.OpenStandardOutput())
-                    message.ContentStream.CopyTo(output);
-            }
+            foreach (var (name, value) in message.Headers)
+                Console.Error.WriteLine(name + ": " + value);
+
+            using var output = Console.OpenStandardOutput();
+            message.ContentStream.CopyTo(output);
         }
 
         static int Main(string[] args)
