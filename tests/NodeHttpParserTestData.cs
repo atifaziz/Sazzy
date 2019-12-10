@@ -459,7 +459,7 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("CHUNKED_W_NONSENSE_AFTER_LENGTH",
-                ignore: "Pending review/fix.",
+                //ignore: "Pending review/fix.",
                 name: "with nonsense after the length",
                 raw: "POST /chunked_w_nonsense_after_length HTTP/1.1\r\n"
                     + "Transfer-Encoding: chunked\r\n"

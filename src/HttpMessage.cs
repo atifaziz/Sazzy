@@ -271,8 +271,19 @@ namespace Sazzy
                     }
                     case State.ReadChunkSize:
                     {
-                        var chunkSize = (long) (_remainingLength =
-                            int.Parse(ReadLine(), NumberStyles.HexNumber));
+                        // NOTE! Chunk extension is IGNORED; only the size is read and used.
+                        //
+                        //   chunk          = chunk-size [ chunk-extension ] CRLF
+                        //                    chunk-data CRLF
+                        //   chunk-size     = 1*HEX
+                        //   chunk-extension= *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+                        //   chunk-ext-name = token
+                        //   chunk-ext-val  = token | quoted-string
+
+                        var line = ReadLine();
+                        var i = line.IndexOfAny(ChunkSizeDelimiters);
+                        var chunkSize = int.Parse(i > 0 ? line.Substring(0, i) : line, NumberStyles.HexNumber);
+                        _remainingLength = chunkSize;
 
                         _onChunkSizeRead?.Invoke(chunkSize);
 
@@ -283,6 +294,8 @@ namespace Sazzy
 
                 goto loop;
             }
+
+            static readonly char[] ChunkSizeDelimiters = { ';', ' ' };
 
             string ReadLine() => HttpMessage.ReadLine(_input, LineBuilder);
 
