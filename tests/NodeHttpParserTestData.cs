@@ -543,7 +543,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("PREFIX_NEWLINE_GET",
-                ignore: "Pending fix.",
                 /* Some clients, especially after a POST in a keep-alive connection,
                  * will send an extra CRLF before the next request
                  */

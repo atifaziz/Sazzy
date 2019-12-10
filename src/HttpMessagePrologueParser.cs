@@ -47,7 +47,12 @@ namespace Sazzy
 
             var lineBuilder = new StringBuilder();
 
-            var startLine = HttpLine.Read(input, lineBuilder).Trim();
+            string startLine;
+            do
+            {
+                startLine = HttpLine.Read(input, lineBuilder).Trim();
+            }
+            while (startLine.Length == 0);
 
             var match = Regex.Match(startLine, @"^HTTP/(0\.9|[1-9]\.[0-9])\x20+([1-5][0-9]{2})(?:\x20+(.+))?$");
             if (match.Success)
