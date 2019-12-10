@@ -1,13 +1,16 @@
 namespace Sazzy.Tests
 {
     using System;
+    using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Text;
     using NUnit.Framework;
     using Sazzy;
 
-    public class HttpMessageTests
+    public partial class HttpMessageTests
     {
         [Test]
         public void InitWithNullStream()
@@ -154,6 +157,97 @@ namespace Sazzy.Tests
             Assert.That(h.Current.Value, Is.EqualTo("www.example.com"));
 
             Assert.That(h.MoveNext(), Is.False);
+        }
+
+        static IEnumerable<TestCaseData> NodeHttpParserTestCases() =>
+            from m in NodeHttpParserTestData.RequestMessages.Concat(NodeHttpParserTestData.ResponseMessages)
+            let data = new TestCaseData(m).SetDescription(m.Name)
+            select m.Ignore is string r ? data.Ignore(r) : data;
+
+        [TestCaseSource(nameof(NodeHttpParserTestCases))]
+        public void NodeHttpParserSample(NodeHttpParserTestData.Message message)
+        {
+            var chunkSizes = new List<long>();
+
+            void OnChunkSizeRead(long size) =>
+                chunkSizes.Add(size);
+
+            var ms = message.OpenRawStream();
+            var hs = new HttpMessage(ms, OnChunkSizeRead);
+
+            Assert.That(hs.HttpVersion.Major, Is.EqualTo(message.HttpMajor));
+            Assert.That(hs.HttpVersion.Minor, Is.EqualTo(message.HttpMinor));
+
+            if (message.Type == HttpParserType.Request)
+            {
+                Assert.That(hs.RequestMethod, Is.EqualTo(message.Method.ToString().ToUpperInvariant()));
+                Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo(message.RequestUrl));
+
+                var exampleRequestUrl = new Lazy<Uri>(() =>
+                    new Uri(new Uri("http://www.example.com/"), hs.RequestUrl.OriginalString));
+
+                if (message.Host != null)
+                    Assert.That(exampleRequestUrl.Value.Host, Is.EqualTo(message.Host));
+
+                if (message.Port > 0)
+                    Assert.That(exampleRequestUrl.Value.Port, Is.EqualTo(message.Port));
+
+                if (message.UserInfo != null)
+                {
+                    var userInfo = exampleRequestUrl.Value.GetComponents(UriComponents.UserInfo, UriFormat.UriEscaped);
+                    Assert.That(userInfo, Is.EqualTo(message.UserInfo));
+                }
+
+                if (!string.IsNullOrEmpty(message.RequestPath))
+                {
+                    var path = exampleRequestUrl.Value.GetComponents(UriComponents.Path, UriFormat.Unescaped);
+                    Assert.That("/" + path, Is.EqualTo(message.RequestPath));
+                }
+
+                if (message.QueryString != null)
+                {
+                    var qs = exampleRequestUrl.Value.GetComponents(UriComponents.Query, UriFormat.Unescaped);
+                    Assert.That(qs.TrimStart('?'), Is.EqualTo(message.QueryString));
+                }
+
+                if (message.Fragment != null)
+                {
+                    var fragment = exampleRequestUrl.Value.GetComponents(UriComponents.Fragment, UriFormat.Unescaped);
+                    Assert.That(fragment.TrimStart('#'), Is.EqualTo(message.Fragment));
+                }
+            }
+            else
+            {
+                Assert.That(hs.StatusCode, Is.EqualTo((HttpStatusCode) message.StatusCode));
+                Assert.That(hs.ReasonPhrase, Is.EqualTo(message.ResponseStatus));
+            }
+
+            Assert.That(hs.Headers, Is.EqualTo(message.Headers));
+
+            if (!TestContent(hs.ContentStream, message.Body))
+                TestContent(ms.Buffer(), message.Upgrade);
+
+            if (message.ChunkLengths != null)
+            {
+                Assert.That(chunkSizes.Count, Is.EqualTo(message.NumChunksComplete));
+                Assert.That(chunkSizes.SkipLast(1), Is.EqualTo(message.ChunkLengths));
+            }
+
+            bool TestContent(Stream content, string body)
+            {
+                if (body == null)
+                    return false;
+
+                using (var e = body.GetEnumerator())
+                for (var offset = 0; e.MoveNext(); offset++)
+                {
+                    var b = content.ReadByte();
+                    Assert.That(b, Is.EqualTo(e.Current), "Byte offset = {0}", offset);
+                }
+
+                Assert.That(content.ReadByte(), Is.EqualTo(-1), "EOF.");
+                return true;
+            }
         }
     }
 }

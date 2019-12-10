@@ -25,11 +25,16 @@ namespace Sazzy
     using System.Net;
     using System.Text;
 
+    delegate void ChunkSizeReadEventHandler(long size);
+
     public sealed class HttpMessage : IDisposable
     {
         Stream _contentStream;
 
-        public HttpMessage(Stream input)
+        public HttpMessage(Stream input) :
+            this(input, null) {}
+
+        internal HttpMessage(Stream input, ChunkSizeReadEventHandler onChunkSizeRead)
         {
             Version version = null;
             string requestMethod = null;
@@ -80,9 +85,17 @@ namespace Sazzy
             ReasonPhrase   = responseReasonPhrase;
             Headers        = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
             ContentLength  = contentLength;
-            _contentStream = new HttpContentStream(input,
-                                                   chunked ? State.ReadChunkSize : State.CopyAll,
-                                                   ContentLength);
+
+            var initialState
+                = (   "GET"    .Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
+                   || "CONNECT".Equals(requestMethod, StringComparison.OrdinalIgnoreCase))
+                && (contentLength ?? 0) == 0
+                ? State.Eoi
+                : chunked
+                ? State.ReadChunkSize
+                : State.CopyAll;
+
+            _contentStream = new HttpContentStream(input, initialState, ContentLength, onChunkSizeRead);
         }
 
         public bool IsRequest      => RequestUrl != null;
@@ -162,11 +175,15 @@ namespace Sazzy
             long? _remainingLength;
             StringBuilder _lineBuilder;
 
-            public HttpContentStream(Stream input, State state, long? length)
+            ChunkSizeReadEventHandler _onChunkSizeRead;
+
+            public HttpContentStream(Stream input, State state, long? length,
+                                     ChunkSizeReadEventHandler onChunkSizeRead)
             {
                 _input = input;
                 _state = state;
                 _remainingLength = _contentLength = length;
+                _onChunkSizeRead = onChunkSizeRead;
             }
 
             StringBuilder LineBuilder => _lineBuilder ??= new StringBuilder();
@@ -195,6 +212,7 @@ namespace Sazzy
                 _input.Close();
                 _input = null;
                 _lineBuilder = null;
+                _onChunkSizeRead = null;
             }
 
             HttpContentStream This => Return(this);
@@ -253,8 +271,10 @@ namespace Sazzy
                     }
                     case State.ReadChunkSize:
                     {
-                        var chunkSize = _remainingLength =
-                            int.Parse(ReadLine(), NumberStyles.HexNumber);
+                        var chunkSize = (long) (_remainingLength =
+                            int.Parse(ReadLine(), NumberStyles.HexNumber));
+
+                        _onChunkSizeRead?.Invoke(chunkSize);
 
                         _state = chunkSize == 0 ? State.Eoi : State.CopyChunk;
                         break;
