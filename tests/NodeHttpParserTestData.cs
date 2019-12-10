@@ -1310,7 +1310,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("NO_REASON_PHRASE",
-                ignore: "Pending review/fix.",
                 name: "301 no response phrase",
                 raw: "HTTP/1.1 301\r\n\r\n",
                 shouldKeepAlive: false,
@@ -1714,7 +1713,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Response("EMPTY_REASON_PHRASE_AFTER_SPACE",
-                ignore: "Pending review/fix.",
                 name: "empty reason phrase after space",
                 raw: "HTTP/1.1 200 \r\n"
                     + "\r\n",
