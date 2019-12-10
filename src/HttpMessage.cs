@@ -47,7 +47,7 @@ namespace Sazzy
 
             void OnRequestLine(string method, string url, string protocolVersion)
             {
-                version = new Version(protocolVersion);
+                version = protocolVersion != null ? new Version(protocolVersion) : new Version(0, 9);
                 requestMethod = method;
                 requestUrl = new Uri(url, UriKind.RelativeOrAbsolute);
             }

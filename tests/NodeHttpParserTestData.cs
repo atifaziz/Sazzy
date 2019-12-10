@@ -635,7 +635,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("NO_HTTP_VERSION",
-                ignore: "Pending review.",
                 name: "request with no http version",
                 raw: "GET /\r\n"
                     + "\r\n",
