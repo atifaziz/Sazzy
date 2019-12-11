@@ -26,6 +26,7 @@ namespace Sazzy
     using System.Text;
 
     delegate void ChunkSizeReadEventHandler(long size);
+    delegate void TrailingHeadersReadEventHandler(IList<KeyValuePair<string, string>> headers);
 
     public sealed class HttpMessage : IDisposable
     {
@@ -73,19 +74,23 @@ namespace Sazzy
                 }
             }
 
+            void OnTrailingHeader(IList<KeyValuePair<string, string>> headers) =>
+                TrailingHeaders = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
+
             HttpMessagePrologueParser.Parse(input,
                 HttpMessagePrologueParser.CreateDelegatingSink(
                     OnRequestLine,
                     OnResponseLine,
                     OnHeader));
 
-            HttpVersion    = version;
-            RequestMethod  = requestMethod;
-            RequestUrl     = requestUrl;
-            StatusCode     = responseStatusCode;
-            ReasonPhrase   = responseReasonPhrase;
-            Headers        = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
-            ContentLength  = contentLength;
+            HttpVersion     = version;
+            RequestMethod   = requestMethod;
+            RequestUrl      = requestUrl;
+            StatusCode      = responseStatusCode;
+            ReasonPhrase    = responseReasonPhrase;
+            Headers         = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
+            TrailingHeaders = chunked ? null : EmptyKeyValuePairs;
+            ContentLength   = contentLength;
 
             var initialState
                 = (   "GET"    .Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
@@ -96,7 +101,10 @@ namespace Sazzy
                 ? State.ReadChunkSize
                 : State.CopyAll;
 
-            _contentStream = new HttpContentStream(input, initialState, ContentLength, onChunkSizeRead);
+            _contentStream = new HttpContentStream(input, initialState, ContentLength,
+                                                   onChunkSizeRead,
+                                                   chunked ? OnTrailingHeader
+                                                            : (TrailingHeadersReadEventHandler)null);
         }
 
         public bool IsRequest      => RequestUrl != null;
@@ -115,6 +123,7 @@ namespace Sazzy
         public string ReasonPhrase       { get; }
 
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; }
+        public IReadOnlyCollection<KeyValuePair<string, string>> TrailingHeaders { get; private set; }
 
         Dictionary<string, string> _headerByName;
 
@@ -169,6 +178,8 @@ namespace Sazzy
 
         enum State { Eoi, CopyAll, CopyChunk, ReadChunkSize }
 
+        static readonly KeyValuePair<string, string>[] EmptyKeyValuePairs = new KeyValuePair<string, string>[0];
+
         sealed class HttpContentStream : Stream
         {
             Stream _input;
@@ -180,14 +191,17 @@ namespace Sazzy
             StringBuilder _lineBuilder;
 
             ChunkSizeReadEventHandler _onChunkSizeRead;
+            TrailingHeadersReadEventHandler _onTrailingHeadersRead;
 
             public HttpContentStream(Stream input, State state, long? length,
-                                     ChunkSizeReadEventHandler onChunkSizeRead)
+                                     ChunkSizeReadEventHandler onChunkSizeRead,
+                                     TrailingHeadersReadEventHandler onTrailingHeadersRead)
             {
                 _input = input;
                 _state = state;
                 _remainingLength = _contentLength = length;
                 _onChunkSizeRead = onChunkSizeRead;
+                _onTrailingHeadersRead = onTrailingHeadersRead;
             }
 
             StringBuilder LineBuilder => _lineBuilder ??= new StringBuilder();
@@ -218,6 +232,7 @@ namespace Sazzy
                 _input = null;
                 _lineBuilder = null;
                 _onChunkSizeRead = null;
+                _onTrailingHeadersRead = null;
             }
 
             HttpContentStream This => Return(this);
@@ -292,7 +307,21 @@ namespace Sazzy
 
                         _onChunkSizeRead?.Invoke(chunkSize);
 
-                        _state = chunkSize == 0 ? State.Eoi : State.CopyChunk;
+                        if (chunkSize > 0)
+                        {
+                            _state = State.CopyChunk;
+                        }
+                        else
+                        {
+                            List<KeyValuePair<string, string>> headers = null;
+                            foreach (var header in HttpMessagePrologueParser.ReadHeaders(_input))
+                                (headers ??= new List<KeyValuePair<string, string>>()).Add(header);
+
+                            _onTrailingHeadersRead?.Invoke(headers ?? (IList<KeyValuePair<string, string>>)EmptyKeyValuePairs);
+
+                            _state = State.Eoi;
+                        }
+
                         break;
                     }
                 }

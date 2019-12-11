@@ -17,6 +17,7 @@
 namespace Sazzy
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Text;
@@ -73,6 +74,15 @@ namespace Sazzy
                 throw new FormatException("Invalid HTTP request line or status response:" + startLine);
             }
 
+            foreach (var (name, value) in ReadHeaders(input, lineBuilder))
+                sink.OnHeader(name, value);
+        }
+
+        internal static IEnumerable<KeyValuePair<string, string>> ReadHeaders(Stream input) =>
+            ReadHeaders(input, new StringBuilder());
+
+        static IEnumerable<KeyValuePair<string, string>> ReadHeaders(Stream input, StringBuilder lineBuilder)
+        {
             string headerName = null;
             string headerValue = null;
 
@@ -90,7 +100,7 @@ namespace Sazzy
                 else
                 {
                     if (headerName != null)
-                        sink.OnHeader(headerName, headerValue);
+                        yield return new KeyValuePair<string, string>(headerName, headerValue);
 
                     var pair = line.Split(Colon, 2);
                     if (pair.Length != 2)
@@ -102,7 +112,7 @@ namespace Sazzy
             }
 
             if (headerName != null)
-                sink.OnHeader(headerName, headerValue);
+                yield return new KeyValuePair<string, string>(headerName, headerValue);
         }
 
         public static IHttpMessagePrologueParseSink

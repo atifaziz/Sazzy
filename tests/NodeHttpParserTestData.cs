@@ -430,7 +430,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("CHUNKED_W_TRAILING_HEADERS",
-                ignore: "Pending support for chunked trailer part.",
                 name: "chunked with trailing headers. blech.",
                 raw: "POST /chunked_w_trailing_headers HTTP/1.1\r\n"
                     + "Transfer-Encoding: chunked\r\n"

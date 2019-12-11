@@ -222,10 +222,12 @@ namespace Sazzy.Tests
                 Assert.That(hs.ReasonPhrase, Is.EqualTo(message.ResponseStatus));
             }
 
-            Assert.That(hs.Headers, Is.EqualTo(message.Headers));
-
             if (!TestContent(hs.ContentStream, message.Body))
                 TestContent(ms.Buffer(), message.Upgrade);
+
+            var headers = hs.Headers;
+            Assert.That(hs.TrailingHeaders switch { null => headers, var ths => headers.Concat(ths) },
+                        Is.EqualTo(message.Headers));
 
             if (message.ChunkLengths != null)
             {
