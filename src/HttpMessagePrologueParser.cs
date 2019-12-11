@@ -42,9 +42,6 @@ namespace Sazzy
             if (!input.CanRead)
                 throw new ArgumentException(null, nameof(input));
 
-            string headerName = null;
-            string headerValue = null;
-
             var lineBuilder = new StringBuilder();
 
             string startLine;
@@ -75,6 +72,9 @@ namespace Sazzy
             {
                 throw new FormatException("Invalid HTTP request line or status response:" + startLine);
             }
+
+            string headerName = null;
+            string headerValue = null;
 
             while (true)
             {
