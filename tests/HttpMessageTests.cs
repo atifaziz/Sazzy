@@ -233,7 +233,7 @@ namespace Sazzy.Tests
                 Assert.That(chunkSizes.SkipLast(1), Is.EqualTo(message.ChunkLengths));
             }
 
-            bool TestContent(Stream content, string body)
+            static bool TestContent(Stream content, string body)
             {
                 if (body == null)
                     return false;
