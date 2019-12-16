@@ -68,9 +68,15 @@ namespace Sazzy
                 if (!string.IsNullOrEmpty(value))
                 {
                     if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
-                        chunked = "chunked".Equals(value, StringComparison.OrdinalIgnoreCase);
+                    {
+                        chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                    }
                     else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
-                        contentLength = long.Parse(value, NumberStyles.None, CultureInfo.InvariantCulture);
+                    {
+                        contentLength = long.Parse(value, NumberStyles.AllowLeadingWhite
+                                                         | NumberStyles.AllowTrailingWhite,
+                                                    CultureInfo.InvariantCulture);
+                    }
                 }
             }
 
