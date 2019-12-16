@@ -37,7 +37,7 @@ namespace Sazzy
                     lineBuilder.Append(ch);
             }
 
-            return lineBuilder.ToString();
+            return b < 0 ? null : lineBuilder.ToString();
         }
     }
 }

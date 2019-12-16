@@ -48,7 +48,9 @@ namespace Sazzy
             string startLine;
             do
             {
-                startLine = HttpLine.Read(input, lineBuilder).Trim();
+                startLine = HttpLine.Read(input, lineBuilder)?.Trim();
+                if (startLine == null)
+                    throw new FormatException("Missing HTTP request line or status response.");
             }
             while (startLine.Length == 0);
 
