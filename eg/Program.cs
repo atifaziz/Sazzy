@@ -17,15 +17,10 @@
 namespace Sazzy.Sample
 {
     using System;
-    using System.Globalization;
     using System.IO;
-    using System.IO.Compression;
-    using System.Linq;
 
     static class Program
     {
-        enum MessageKind { Request, Response }
-
         static void Wain(string[] args)
         {
             var arg = args.Length > 0
@@ -34,70 +29,31 @@ namespace Sazzy.Sample
 
             if (IsZipFile(arg))
             {
-                using var zip = ZipFile.Open(arg, ZipArchiveMode.Read);
-
-                var entries = Enumerable.ToArray(
-                    from e in zip.Entries
-                    where e.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)
-                    let fn = Path.GetFileNameWithoutExtension(e.Name)
-                    let tokens = fn.Split('_', 2)
-                    select tokens.Length == 2 && tokens[0].Length > 0 && tokens[1].Length == 1
-                           && char.ToLowerInvariant(tokens[1][0]) switch
-                              {
-                                  'c' => MessageKind.Request,
-                                  's' => MessageKind.Response,
-                                  _   => (MessageKind?)null
-                              }
-                              is MessageKind mk
-                           && int.TryParse(tokens[0], NumberStyles.None, CultureInfo.InvariantCulture, out var n)
-                         ? new
-                         {
-                             Key = n,
-                             HttpMessageKind = mk,
-                             e.Name,
-                             e.FullName,
-                             Content = Streamable.Create(e.Open),
-                         }
-                         : null
-                    into e
-                    where e != null
-                    select e);
-
-                var rrPairs =
-                    from req in entries
-                    where req.HttpMessageKind == MessageKind.Request
-                    join rsp in from rsp in entries
-                                where rsp.HttpMessageKind == MessageKind.Response
-                                select rsp
-                        on req.Key equals rsp.Key
-                    orderby req.Key
-                    select (Request: req, rsp);
-
-                var i = 0;
-                foreach (var (req, rsp) in rrPairs)
+                foreach (var e in Saz.ReadCorrelated(arg, (reqn, req, rspn, rsp) => new
                 {
-                    foreach (var e in new[] { req, rsp })
+                    Request  = new { FullName = reqn, Message = req },
+                    Response = new { FullName = rspn, Message = rsp },
+                }))
+                {
+                    foreach (var r in new[] { e.Request, e.Response })
                     {
-                        Console.WriteLine($":{e.FullName}");
+                        Console.WriteLine($":{r.FullName}");
                         Console.WriteLine();
-                        using var input = e.Content.Open();
-                        Dump(input, Console.Out);
+                        Dump(r.Message, Console.Out);
                         Console.WriteLine();
                     }
-                    i++;
                 }
             }
             else
             {
                 using var input = File.OpenRead(arg);
-                Dump(input, Console.Error, Console.OpenStandardOutput());
+                using var message = new HttpMessage(input);
+                Dump(message, Console.Error, Console.OpenStandardOutput());
             }
         }
 
-        static void Dump(Stream input, TextWriter headerWriter, Stream contentStream = null)
+        static void Dump(HttpMessage message, TextWriter headerWriter, Stream contentStream = null)
         {
-            using var message = new HttpMessage(input);
-
             headerWriter.WriteLine(message.StartLine);
 
             foreach (var (name, value) in message.Headers)
