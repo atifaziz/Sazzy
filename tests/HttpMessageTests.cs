@@ -9,7 +9,7 @@ namespace Sazzy.Tests
     using NUnit.Framework;
     using Sazzy;
 
-    public partial class HttpMessageTests
+    public class HttpMessageTests
     {
         [Test]
         public void InitWithNullStream()
