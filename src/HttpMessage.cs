@@ -24,6 +24,7 @@ namespace Sazzy
     using System.Linq;
     using System.Net;
     using System.Text;
+    using System.Threading.Tasks;
 
     delegate void ChunkSizeReadEventHandler(long size);
     delegate void TrailingHeadersReadEventHandler(IList<KeyValuePair<string, string>> headers);
@@ -153,6 +154,25 @@ namespace Sazzy
         public Stream ContentStream =>
             _contentStream ?? throw new ObjectDisposedException(nameof(HttpMessage));
 
+        public async Task BufferAsync()
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(HttpMessage));
+
+            switch (_contentStream)
+            {
+                case MemoryStream _:
+                    break;
+                case HttpContentStream cs when cs.HasBeenRead:
+                    throw new InvalidOperationException();
+                case HttpContentStream cs:
+                    var ms = ContentLength is long len ? new MemoryStream((int) len) : new MemoryStream();
+                    await cs.CopyToAsync(ms).ConfigureAwait(false);
+                    _contentStream = ms;
+                    break;
+            }
+        }
+
         bool IsDisposed => ContentStream == null;
 
         public void DisownContentStream() => _isContentStreamDisowned = true;
@@ -196,6 +216,8 @@ namespace Sazzy
             long? _remainingLength;
             StringBuilder _lineBuilder;
 
+            bool _hasBeenRead;
+
             ChunkSizeReadEventHandler _onChunkSizeRead;
             TrailingHeadersReadEventHandler _onTrailingHeadersRead;
 
@@ -214,6 +236,8 @@ namespace Sazzy
 
             T Return<T>(T value) =>
                 !_disposed ? value : throw new ObjectDisposedException(nameof(HttpContentStream));
+
+            public bool HasBeenRead => Return(_hasBeenRead);
 
             public override bool CanRead  => Return(true);
             public override bool CanSeek  => Return(false);
@@ -248,6 +272,8 @@ namespace Sazzy
 
             int Read(HttpContentStream _, ArraySegment<byte> destination)
             {
+                _hasBeenRead = true;
+
                 var result = 0;
 
                 loop: switch (_state)
