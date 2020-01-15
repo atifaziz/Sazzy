@@ -37,5 +37,8 @@ namespace Sazzy
             list.RemoveAt(index);
             return result;
         }
+
+        public static string ToHexadecimalString(this byte[] bytes) =>
+            BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", string.Empty);
     }
 }
