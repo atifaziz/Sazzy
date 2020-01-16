@@ -79,5 +79,36 @@ namespace Sazzy
                                       rsp.ZipEntry.FullName, response);
             }
         }
+
+        public static IEnumerable<KeyValuePair<TKey, Func<TValue>>>
+            ReadMap<TKey, TValue>(
+                string path,
+                Func<HttpRequest, (bool, TKey)> keySelector,
+                Func<HttpResponse, TValue> valueSelector)
+        {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (keySelector == null) throw new ArgumentNullException(nameof(keySelector));
+            if (valueSelector == null) throw new ArgumentNullException(nameof(valueSelector));
+
+            return
+                from e in
+                    ReadCorrelated(path,
+                        (_, req, rspPath, __) =>
+                            keySelector(req) is (true, var key)
+                            ? new KeyValuePair<TKey, Func<TValue>>(key, () => ReadResponse(rspPath))
+                            : default)
+                where e.Value != null
+                select e;
+
+            TValue ReadResponse(string entryName)
+            {
+                using var zip = ZipFile.Open(path, ZipArchiveMode.Read);
+                var entry = zip.GetEntry(entryName);
+                if (entry == null)
+                    throw new Exception($"Entry \"{entryName}\" not found in \"{path}\".");
+                using var stream = entry.Open();
+                return valueSelector(HttpMessageReader.ReadResponse(stream));
+            }
+        }
     }
 }
