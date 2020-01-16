@@ -63,7 +63,7 @@ namespace Sazzy
             _message = message;
         }
 
-        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpRequest));
+        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpResponse));
 
         public HttpStatusCode StatusCode   => Message.StatusCode;
         public string         ReasonPhrase => Message.ReasonPhrase;
