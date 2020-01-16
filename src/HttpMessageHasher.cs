@@ -148,11 +148,14 @@ namespace Sazzy
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             using var hash = IncrementalHash.CreateHash(hashAlgorithm);
-            Collect(handlers.Prepend(handler))(message, ArrayPool<byte>.Create(), buffer =>
-            {
-                hash.AppendData(buffer.Array, buffer.Offset, buffer.Count);
-                return Task.CompletedTask;
-            });
+            handler = Collect(handlers.Prepend(handler));
+            var task = handler(message, ArrayPool<byte>.Create(),
+                               buffer =>
+                               {
+                                   hash.AppendData(buffer.Array, buffer.Offset, buffer.Count);
+                                   return Task.CompletedTask;
+                               });
+            task.GetAwaiter().GetResult();
             return hash.GetHashAndReset();
         }
 
