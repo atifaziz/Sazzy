@@ -21,13 +21,13 @@ namespace Sazzy
 
     public sealed class ResponseHashConfig
     {
-        public static readonly RequestHashConfig Default =
-            new RequestHashConfig(HttpMessageHasher.HttpVersion(),
-                                  HttpMessageHasher.StatusCode(),
-                                  HttpMessageHasher.ReasonPhrase(),
-                                  HttpMessageHasher.Headers(),
-                                  HttpMessageHasher.Content(),
-                                  HttpMessageHasher.TrailingHeaders());
+        public static readonly ResponseHashConfig Default =
+            new ResponseHashConfig(HttpMessageHasher.HttpVersion(),
+                                   HttpMessageHasher.StatusCode(),
+                                   HttpMessageHasher.ReasonPhrase(),
+                                   HttpMessageHasher.Headers(),
+                                   HttpMessageHasher.Content(),
+                                   HttpMessageHasher.TrailingHeaders());
 
         ResponseHashConfig(ResponseHashConfig that) :
             this(that.Version, that.StatusCode, that.ReasonPhrase,
