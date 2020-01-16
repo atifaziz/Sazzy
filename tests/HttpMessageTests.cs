@@ -42,6 +42,8 @@ namespace Sazzy.Tests
             using var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
+            Assert.That(hs.IsRequest, Is.False);
+            Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
@@ -86,6 +88,8 @@ namespace Sazzy.Tests
             using var hs = new HttpMessage(input);
 
             Assert.That(hs.IsResponse, Is.True);
+            Assert.That(hs.IsRequest, Is.False);
+            Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));

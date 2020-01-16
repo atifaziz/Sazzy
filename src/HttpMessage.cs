@@ -28,6 +28,8 @@ namespace Sazzy
     delegate void ChunkSizeReadEventHandler(long size);
     delegate void TrailingHeadersReadEventHandler(IList<KeyValuePair<string, string>> headers);
 
+    public enum HttpMessageKind { Request, Response }
+
     public sealed class HttpMessage : IDisposable
     {
         Stream _contentStream;
@@ -113,12 +115,14 @@ namespace Sazzy
                                                             : (TrailingHeadersReadEventHandler)null);
         }
 
-        public bool IsRequest      => RequestUrl != null;
-        public bool IsResponse     => !IsRequest;
+        public HttpMessageKind Kind => RequestUrl != null ? HttpMessageKind.Request : HttpMessageKind.Response;
 
-        public string StartLine    => ResponseLine ?? RequestLine;
-        public string RequestLine  => IsRequest  ? string.Join(" ", RequestMethod, RequestUrl.OriginalString, "HTTP/" + HttpVersion) : null;
-        public string ResponseLine => IsResponse ? string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion) : null;
+        public bool IsRequest       => Kind == HttpMessageKind.Request;
+        public bool IsResponse      => Kind == HttpMessageKind.Response;
+
+        public string StartLine     => ResponseLine ?? RequestLine;
+        public string RequestLine   => IsRequest  ? string.Join(" ", RequestMethod, RequestUrl.OriginalString, "HTTP/" + HttpVersion) : null;
+        public string ResponseLine  => IsResponse ? string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion) : null;
 
         public Version HttpVersion       { get; }
 
