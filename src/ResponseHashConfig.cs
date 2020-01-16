@@ -33,8 +33,8 @@ namespace Sazzy
             this(that.Version, that.StatusCode, that.ReasonPhrase,
                  that.Headers, that.Content, that.TrailingHeaders) {}
 
-        public ResponseHashConfig(HttpMessageHashHandler version, HttpMessageHashHandler statusCode, HttpMessageHashHandler reasonPhrase,
-                                  HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
+        ResponseHashConfig(HttpMessageHashHandler version, HttpMessageHashHandler statusCode, HttpMessageHashHandler reasonPhrase,
+                           HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
         {
             Version = version;
             StatusCode = statusCode;

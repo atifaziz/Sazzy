@@ -33,8 +33,8 @@ namespace Sazzy
             this(that.Method, that.Url, that.Version,
                  that.Headers, that.Content, that.TrailingHeaders) {}
 
-        public RequestHashConfig(HttpMessageHashHandler method, HttpMessageHashHandler url, HttpMessageHashHandler version,
-                                 HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
+        RequestHashConfig(HttpMessageHashHandler method, HttpMessageHashHandler url, HttpMessageHashHandler version,
+                          HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
         {
             Method = method;
             Url = url;
