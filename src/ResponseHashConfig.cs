@@ -34,7 +34,7 @@ namespace Sazzy
                  that.Headers, that.Content, that.TrailingHeaders) {}
 
         public ResponseHashConfig(HttpMessageHashHandler version, HttpMessageHashHandler statusCode, HttpMessageHashHandler reasonPhrase,
-                                 HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
+                                  HttpMessageHashHandler headers, HttpMessageHashHandler content, HttpMessageHashHandler trailingHeaders)
         {
             Version = version;
             StatusCode = statusCode;
