@@ -78,6 +78,8 @@ namespace Sazzy
         static readonly HttpMessageHashHandler HttpVersionHashHandler =
             String(m => m.HttpVersion.ToString(2), Encoding.ASCII);
 
+        internal static HttpMessageHashHandler Nop => delegate { return Task.CompletedTask; };
+
         public static HttpMessageHashHandler HttpVersion()   => HttpVersionHashHandler;
         public static HttpMessageHashHandler RequestMethod() => RequestMethodHashHandler;
         public static HttpMessageHashHandler RequestUrl()    => RequestUrlHashHandler;
@@ -133,20 +135,6 @@ namespace Sazzy
                 var m when m.IsRequest => m.Hash(hashAlgorithm, RequestMethod(), RequestUrl(), HttpVersion(), Headers(), Content(), TrailingHeaders()),
                 var m => m.Hash(hashAlgorithm, HttpVersion(), StatusCode(), ReasonPhrase(), Headers(), Content(), TrailingHeaders())
             };
-
-        public static string HashString(this HttpRequest request, HashAlgorithmName hashAlgorithm) =>
-            request.Hash(hashAlgorithm).ToHexadecimalString();
-
-        public static byte[] Hash(this HttpRequest request, HashAlgorithmName hashAlgorithm)
-            => request == null ? throw new ArgumentNullException(nameof(request))
-             : request.Message.Hash(hashAlgorithm);
-
-        public static string HashString(this HttpResponse response, HashAlgorithmName hashAlgorithm) =>
-            response.Hash(hashAlgorithm).ToHexadecimalString();
-
-        public static byte[] Hash(this HttpResponse response, HashAlgorithmName hashAlgorithm)
-            => response == null ? throw new ArgumentNullException(nameof(response))
-             : response.Message.Hash(hashAlgorithm);
 
         public static string HashString(this HttpMessage message, HashAlgorithmName hashAlgorithm,
                                         HttpMessageHashHandler handler,
