@@ -25,17 +25,107 @@ namespace Sazzy
     using System.Net;
     using System.Text;
 
+    public enum HttpMessageKind { Request, Response }
+
+    public sealed class HttpRequest : IDisposable
+    {
+        HttpMessage _message;
+
+        public HttpRequest(HttpMessage message)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message.Kind != HttpMessageKind.Request) throw new ArgumentException("Invalid HTTP message kind.", nameof(message));
+            _message = message;
+        }
+
+        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpRequest));
+
+        public string  Method      => Message.RequestMethod;
+        public Uri     Url         => Message.RequestUrl;
+        public Version HttpVersion => Message.HttpVersion;
+
+        public void Dispose()
+        {
+            var message = _message;
+            _message = null;
+            message?.Dispose();
+        }
+    }
+
+    public sealed class HttpResponse: IDisposable
+    {
+        HttpMessage _message;
+
+        public HttpResponse(HttpMessage message)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message.Kind != HttpMessageKind.Response) throw new ArgumentException("Invalid HTTP message kind.", nameof(message));
+            _message = message;
+        }
+
+        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpRequest));
+
+        public HttpStatusCode StatusCode   => Message.StatusCode;
+        public string         ReasonPhrase => Message.ReasonPhrase;
+        public Version        HttpVersion  => Message.HttpVersion;
+
+        public void Dispose()
+        {
+            var message = _message;
+            _message = null;
+            message?.Dispose();
+        }
+    }
+
+    public static class HttpMessageReader
+    {
+        public static HttpMessage Read(Stream stream) =>
+            new HttpMessage(stream);
+
+        public static HttpRequest ReadRequest(Stream stream)
+            => Read(stream, out var req, out _) == HttpMessageKind.Request ? req
+             : throw new ArgumentException(null, nameof(stream));
+
+        public static HttpResponse ReadResponse(Stream stream)
+            => Read(stream, out _, out var rsp) == HttpMessageKind.Response ? rsp
+             : throw new ArgumentException(null, nameof(stream));
+
+        public static T Read<T>(Stream stream, Func<HttpRequest, T> requestSelector,
+                                               Func<HttpResponse, T> responseSelector)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+            if (requestSelector == null) throw new ArgumentNullException(nameof(requestSelector));
+            if (responseSelector == null) throw new ArgumentNullException(nameof(responseSelector));
+
+            return Read(stream, out var request, out var response) switch
+            {
+                HttpMessageKind.Request => requestSelector(request),
+                HttpMessageKind.Response => responseSelector(response),
+                _ => throw new Exception("Internal implementation error.")
+            };
+        }
+
+        public static HttpMessageKind Read(Stream stream, out HttpRequest request,
+                                                          out HttpResponse response)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            var message = Read(stream);
+            request = message.IsRequest ? new HttpRequest(message) : null;
+            response = message.IsResponse ? new HttpResponse(message) : null;
+            return message.Kind;
+        }
+    }
+
     delegate void ChunkSizeReadEventHandler(long size);
     delegate void TrailingHeadersReadEventHandler(IList<KeyValuePair<string, string>> headers);
-
-    public enum HttpMessageKind { Request, Response }
 
     public sealed class HttpMessage : IDisposable
     {
         Stream _contentStream;
         bool _isContentStreamDisowned;
 
-        public HttpMessage(Stream input) :
+        internal HttpMessage(Stream input) :
             this(input, null) {}
 
         internal HttpMessage(Stream input, ChunkSizeReadEventHandler onChunkSizeRead)

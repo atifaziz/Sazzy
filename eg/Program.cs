@@ -31,8 +31,8 @@ namespace Sazzy.Sample
             {
                 foreach (var e in Saz.ReadCorrelated(arg, (reqn, req, rspn, rsp) => new
                 {
-                    Request  = new { FullName = reqn, Message = req },
-                    Response = new { FullName = rspn, Message = rsp },
+                    Request  = new { FullName = reqn, req.Message },
+                    Response = new { FullName = rspn, rsp.Message },
                 }))
                 {
                     foreach (var r in new[] { e.Request, e.Response })
@@ -47,7 +47,7 @@ namespace Sazzy.Sample
             else
             {
                 using var input = File.OpenRead(arg);
-                using var message = new HttpMessage(input);
+                using var message = HttpMessageReader.Read(input);
                 Dump(message, Console.Error, Console.OpenStandardOutput());
             }
         }

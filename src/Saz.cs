@@ -34,8 +34,8 @@ namespace Sazzy
         /// </remarks>
 
         public static IEnumerable<T> ReadCorrelated<T>(string path,
-                                                       Func<string, HttpMessage,
-                                                            string, HttpMessage, T> selector)
+                                                       Func<string, HttpRequest,
+                                                            string, HttpResponse, T> selector)
         {
             using var zip = ZipFile.Open(path, ZipArchiveMode.Read);
 
@@ -72,11 +72,11 @@ namespace Sazzy
             foreach (var (req, rsp) in rrPairs)
             {
                 using var requestStream = req.ZipEntry.Open();
-                using var requestMessage = new HttpMessage(requestStream);
+                using var request = HttpMessageReader.ReadRequest(requestStream);
                 using var responseStream = rsp.ZipEntry.Open();
-                using var responseMessage = new HttpMessage(responseStream);
-                yield return selector(req.ZipEntry.FullName, requestMessage,
-                                      rsp.ZipEntry.FullName, responseMessage);
+                using var response = HttpMessageReader.ReadResponse(responseStream);
+                yield return selector(req.ZipEntry.FullName, request,
+                                      rsp.ZipEntry.FullName, response);
             }
         }
     }

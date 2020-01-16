@@ -12,14 +12,6 @@ namespace Sazzy.Tests
     public class HttpMessageTests
     {
         [Test]
-        public void InitWithNullStream()
-        {
-            var e = Assert.Throws<ArgumentNullException>(() =>
-                new HttpMessage(null));
-            Assert.That(e.ParamName, Is.EqualTo("input"));
-        }
-
-        [Test]
         public void ChunkedTransferEncoding()
         {
             const string crlf = "\r\n";
@@ -39,7 +31,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(response));
-            using var hs = new HttpMessage(input);
+            using var hs = HttpMessageReader.Read(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.IsRequest, Is.False);
@@ -85,7 +77,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(response));
-            using var hs = new HttpMessage(input);
+            using var hs = HttpMessageReader.Read(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.IsRequest, Is.False);
@@ -138,7 +130,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(request));
-            using var hs = new HttpMessage(input);
+            using var hs = HttpMessageReader.Read(input);
 
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo("/"));
