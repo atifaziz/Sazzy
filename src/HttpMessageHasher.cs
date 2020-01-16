@@ -134,6 +134,20 @@ namespace Sazzy
                 var m => m.Hash(hashAlgorithm, HttpVersion(), StatusCode(), ReasonPhrase(), Headers(), Content(), TrailingHeaders())
             };
 
+        public static string HashString(this HttpRequest request, HashAlgorithmName hashAlgorithm) =>
+            request.Hash(hashAlgorithm).ToHexadecimalString();
+
+        public static byte[] Hash(this HttpRequest request, HashAlgorithmName hashAlgorithm)
+            => request == null ? throw new ArgumentNullException(nameof(request))
+             : request.Message.Hash(hashAlgorithm);
+
+        public static string HashString(this HttpResponse response, HashAlgorithmName hashAlgorithm) =>
+            response.Hash(hashAlgorithm).ToHexadecimalString();
+
+        public static byte[] Hash(this HttpResponse response, HashAlgorithmName hashAlgorithm)
+            => response == null ? throw new ArgumentNullException(nameof(response))
+             : response.Message.Hash(hashAlgorithm);
+
         public static string HashString(this HttpMessage message, HashAlgorithmName hashAlgorithm,
                                         HttpMessageHashHandler handler,
                                         params HttpMessageHashHandler[] handlers) =>
