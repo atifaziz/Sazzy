@@ -196,7 +196,7 @@ namespace Sazzy.Tests
             }
 
             public MemoryStream OpenRawStream() =>
-                new MemoryStream(Raw.Select(ch => (byte) ch).ToArray());
+                new MemoryStream(Raw.Select(ch => (byte)ch).ToArray());
 
             public override string ToString() =>
                 $"{{ {Type}, {Id}, \"{Name}\" }}";

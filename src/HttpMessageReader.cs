@@ -53,7 +53,7 @@ namespace Sazzy
             void OnResponseLine(string protocolVersion, int statusCode, string reasonPhrase)
             {
                 version = new Version(protocolVersion);
-                responseStatusCode = (HttpStatusCode) statusCode;
+                responseStatusCode = (HttpStatusCode)statusCode;
                 responseReasonPhrase = reasonPhrase;
             }
 
@@ -151,7 +151,7 @@ namespace Sazzy
 
             int b;
             char ch;
-            while ((b = stream.ReadByte()) >= 0 && (ch = (char) b) != '\n')
+            while ((b = stream.ReadByte()) >= 0 && (ch = (char)b) != '\n')
             {
                 if (ch != '\r' && ch != '\n')
                     lineBuilder.Append(ch);
@@ -230,10 +230,10 @@ namespace Sazzy
                     {
                         while (_remainingLength > 0 || _remainingLength == null)
                         {
-                            var count = (int) Math.Min(_remainingLength is long n
-                                                       ? Math.Min(int.MaxValue, n)
-                                                       : int.MaxValue,
-                                                       destination.Count);
+                            var count = (int)Math.Min(_remainingLength is long n
+                                                      ? Math.Min(int.MaxValue, n)
+                                                      : int.MaxValue,
+                                                      destination.Count);
 
                             var read = _input.Read(destination.Array, destination.Offset, count);
 

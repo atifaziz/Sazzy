@@ -31,7 +31,7 @@ namespace Sazzy
 
             int b; char ch;
 
-            while ((b = stream.ReadByte()) >= 0 && (ch = (char) b) != '\n')
+            while ((b = stream.ReadByte()) >= 0 && (ch = (char)b) != '\n')
             {
                 if (ch != '\r' && ch != '\n')
                     lineBuilder.Append(ch);

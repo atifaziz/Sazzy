@@ -11,7 +11,7 @@ namespace Sazzy.Tests
 
             var buffer
                 = input.CanSeek
-                ? new MemoryStream(checked((int) (input.Length - input.Position)))
+                ? new MemoryStream(checked((int)(input.Length - input.Position)))
                 : new MemoryStream();
             input.CopyTo(buffer);
             buffer.Position = 0;

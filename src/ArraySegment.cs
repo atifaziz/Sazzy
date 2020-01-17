@@ -38,7 +38,7 @@ namespace Sazzy
         public static ArraySegment<T> Slice<T>(this ArraySegment<T> segment, int index) =>
             segment.Array == null
             ? throw new InvalidOperationException()
-            : ((uint) index > (uint) segment.Count
+            : ((uint)index > (uint) segment.Count
             ? throw new ArgumentOutOfRangeException(nameof(index))
             : new ArraySegment<T>(segment.Array, segment.Offset + index, segment.Count - index));
 
