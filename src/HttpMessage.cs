@@ -25,6 +25,8 @@ namespace Sazzy
 
     public enum HttpMessageKind { Request, Response }
 
+    public enum HttpFieldStatus { Missing, Error, Defined }
+
     public abstract class HttpMessage : IDisposable
     {
         Stream _contentStream;
@@ -74,14 +76,21 @@ namespace Sazzy
             }
         }
 
-        long? _cachedContentLength;
+        (HttpFieldStatus, long)? _cachedContentLength;
 
-        public long? ContentLength =>
-            _cachedContentLength ??= this["Content-Length"] switch
+        public (HttpFieldStatus Status, long Value) ContentLength =>
+            TryGetHeader(ref _cachedContentLength, "Content-Length",
+                s => long.TryParse(s, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                                   CultureInfo.InvariantCulture, out var v) ? (true, v) : default);
+
+        (HttpFieldStatus, T) TryGetHeader<T>(ref (HttpFieldStatus, T)? field,
+                                              string name, Func<string,
+                                              (bool, T)> parser) =>
+            field ??= this[name] switch
             {
-                null => (long?)null,
-                string s => long.Parse(s, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
-                                          CultureInfo.InvariantCulture),
+                null => (HttpFieldStatus.Missing, default),
+                string s => parser(s) is (true, var v) ? (HttpFieldStatus.Defined, v)
+                                                       : (HttpFieldStatus.Error, default),
             };
 
         public Stream ContentStream =>

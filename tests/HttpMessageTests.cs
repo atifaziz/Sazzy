@@ -97,7 +97,7 @@ namespace Sazzy.Tests
 
             Assert.That(h.MoveNext(), Is.False);
 
-            Assert.That(hs.ContentLength, Is.EqualTo(0));
+            Assert.That(hs.ContentLength, Is.EqualTo((HttpFieldStatus.Defined, 0)));
         }
 
         [Test]
