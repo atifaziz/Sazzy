@@ -50,7 +50,7 @@ namespace Sazzy
             var rsp = new HttpResponseMessage(response.StatusCode)
             {
                 RequestMessage = request,
-                Version        = response.HttpVersion,
+                Version        = response.ProtocolVersion,
                 ReasonPhrase   = response.ReasonPhrase,
                 Content        = new StreamContent(response.ContentStream),
             };
@@ -98,7 +98,7 @@ namespace Sazzy
 
             var req = new HttpRequestMessage(method, request.Url)
             {
-                Version = request.HttpVersion,
+                Version = request.ProtocolVersion,
                 Content = new StreamContent(request.ContentStream),
             };
 

@@ -34,7 +34,7 @@ namespace Sazzy.Tests
             using var hs = HttpMessageReader.ReadResponse(input);
 
             Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
-            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.ProtocolVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
 
@@ -75,7 +75,7 @@ namespace Sazzy.Tests
             using var hs = HttpMessageReader.ReadResponse(input);
 
             Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
-            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.ProtocolVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
 
@@ -122,7 +122,7 @@ namespace Sazzy.Tests
             using var input = new MemoryStream(ascii.GetBytes(request));
             using var hs = HttpMessageReader.ReadRequest(input);
 
-            Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
+            Assert.That(hs.ProtocolVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.Url.OriginalString, Is.EqualTo("/"));
             Assert.That(hs.Method, Is.EqualTo("GET"));
 
@@ -156,8 +156,8 @@ namespace Sazzy.Tests
             ((IHttpChunkedContentEventSource)hs.ContentStream).ChunkSizeRead +=
                 (_, size) => chunkSizes.Add(size);
 
-            Assert.That(hs.HttpVersion.Major, Is.EqualTo(message.HttpMajor));
-            Assert.That(hs.HttpVersion.Minor, Is.EqualTo(message.HttpMinor));
+            Assert.That(hs.ProtocolVersion.Major, Is.EqualTo(message.HttpMajor));
+            Assert.That(hs.ProtocolVersion.Minor, Is.EqualTo(message.HttpMinor));
 
             if (message.Type == HttpParserType.Request)
             {

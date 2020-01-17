@@ -24,7 +24,7 @@ namespace Sazzy
         public static readonly RequestHashConfig Default =
             new RequestHashConfig(HttpMessageHasher.RequestMethod(),
                                   HttpMessageHasher.RequestUrl(),
-                                  HttpMessageHasher.HttpVersion(),
+                                  HttpMessageHasher.ProtocolVersion(),
                                   HttpMessageHasher.Headers(),
                                   HttpMessageHasher.Content(),
                                   HttpMessageHasher.TrailingHeaders());

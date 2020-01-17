@@ -22,7 +22,7 @@ namespace Sazzy
     public sealed class ResponseHashConfig
     {
         public static readonly ResponseHashConfig Default =
-            new ResponseHashConfig(HttpMessageHasher.HttpVersion(),
+            new ResponseHashConfig(HttpMessageHasher.ProtocolVersion(),
                                    HttpMessageHasher.StatusCode(),
                                    HttpMessageHasher.ReasonPhrase(),
                                    HttpMessageHasher.Headers(),

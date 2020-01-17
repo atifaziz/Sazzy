@@ -22,18 +22,18 @@ namespace Sazzy
 
     public sealed class HttpRequest : HttpMessage
     {
-        internal HttpRequest(string method, Uri url, Version httpVersion,
+        internal HttpRequest(string method, Uri url, Version protocolVersion,
                              IReadOnlyCollection<KeyValuePair<string, string>> headers,
                              Stream contentStream,
                              IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders) :
-            base(HttpMessageKind.Request, httpVersion, headers, contentStream, trailingHeaders)
+            base(HttpMessageKind.Request, protocolVersion, headers, contentStream, trailingHeaders)
         {
             Method = method;
             Url = url ?? throw new ArgumentNullException(nameof(url));
         }
 
         public override string StartLine =>
-            string.Join(" ", Method, Url.OriginalString, "HTTP/" + HttpVersion.ToString(2));
+            string.Join(" ", Method, Url.OriginalString, "HTTP/" + ProtocolVersion.ToString(2));
 
         public string  Method { get; }
         public Uri     Url    { get; }

@@ -77,16 +77,16 @@ namespace Sazzy
         static readonly HttpMessageHashHandler ReasonPhraseHashHandler =
             String(m => ((HttpResponse)m).ReasonPhrase, Encoding.ASCII);
 
-        static readonly HttpMessageHashHandler HttpVersionHashHandler =
-            String(m => m.HttpVersion.ToString(2), Encoding.ASCII);
+        static readonly HttpMessageHashHandler ProtocolVersionHashHandler =
+            String(m => m.ProtocolVersion.ToString(2), Encoding.ASCII);
 
         internal static HttpMessageHashHandler Nop => delegate { return Task.CompletedTask; };
 
-        public static HttpMessageHashHandler HttpVersion()   => HttpVersionHashHandler;
-        public static HttpMessageHashHandler RequestMethod() => RequestMethodHashHandler;
-        public static HttpMessageHashHandler RequestUrl()    => RequestUrlHashHandler;
-        public static HttpMessageHashHandler StatusCode()    => StatusCodeHashHandler;
-        public static HttpMessageHashHandler ReasonPhrase()  => ReasonPhraseHashHandler;
+        public static HttpMessageHashHandler ProtocolVersion() => ProtocolVersionHashHandler;
+        public static HttpMessageHashHandler RequestMethod()   => RequestMethodHashHandler;
+        public static HttpMessageHashHandler RequestUrl()      => RequestUrlHashHandler;
+        public static HttpMessageHashHandler StatusCode()      => StatusCodeHashHandler;
+        public static HttpMessageHashHandler ReasonPhrase()    => ReasonPhraseHashHandler;
 
         public static HttpMessageHashHandler Headers() =>
             Headers(m => m.Headers);

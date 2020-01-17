@@ -33,13 +33,13 @@ namespace Sazzy
         bool _isContentStreamDisowned;
 
         protected HttpMessage(HttpMessageKind kind,
-                              Version httpVersion,
+                              Version protocolVersion,
                               IReadOnlyCollection<KeyValuePair<string, string>> headers,
                               Stream contentStream,
                               IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders)
         {
             Kind = kind;
-            HttpVersion = httpVersion ?? throw new ArgumentNullException(nameof(httpVersion));
+            ProtocolVersion = protocolVersion ?? throw new ArgumentNullException(nameof(protocolVersion));
             Headers = headers ?? throw new ArgumentNullException(nameof(headers));
             _contentStream = contentStream;
             TrailingHeaders = trailingHeaders;
@@ -48,7 +48,7 @@ namespace Sazzy
         public HttpMessageKind Kind { get; }
 
         public abstract string StartLine { get; }
-        public Version HttpVersion       { get; }
+        public Version ProtocolVersion   { get; }
 
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; }
         public IReadOnlyCollection<KeyValuePair<string, string>> TrailingHeaders { get; private set; }

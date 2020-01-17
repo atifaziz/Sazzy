@@ -23,18 +23,18 @@ namespace Sazzy
 
     public sealed class HttpResponse : HttpMessage
     {
-        internal HttpResponse(Version httpVersion, HttpStatusCode statusCode, string reasonPhrase,
+        internal HttpResponse(Version protocolVersion, HttpStatusCode statusCode, string reasonPhrase,
                               IReadOnlyCollection<KeyValuePair<string, string>> headers,
                               Stream contentStream,
                               IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders) :
-            base(HttpMessageKind.Response, httpVersion, headers, contentStream, trailingHeaders)
+            base(HttpMessageKind.Response, protocolVersion, headers, contentStream, trailingHeaders)
         {
             StatusCode = statusCode;
             ReasonPhrase = reasonPhrase;
         }
 
         public override string StartLine =>
-            string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion.ToString(2));
+            string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + ProtocolVersion.ToString(2));
 
         public HttpStatusCode StatusCode   { get; }
         public string         ReasonPhrase { get; }
