@@ -106,5 +106,7 @@ namespace Sazzy
         }
 
         internal static readonly KeyValuePair<string, string>[] EmptyKeyValuePairs = new KeyValuePair<string, string>[0];
+
+        public override string ToString() => StartLine;
     }
 }
