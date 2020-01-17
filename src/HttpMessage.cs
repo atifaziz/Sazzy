@@ -45,9 +45,6 @@ namespace Sazzy
 
         public HttpMessageKind Kind { get; }
 
-        public bool IsRequest  => Kind == HttpMessageKind.Request;
-        public bool IsResponse => Kind == HttpMessageKind.Response;
-
         public abstract string StartLine { get; }
         public Version HttpVersion       { get; }
 

@@ -33,8 +33,6 @@ namespace Sazzy.Tests
             using var input = new MemoryStream(ascii.GetBytes(response));
             using var hs = HttpMessageReader.ReadResponse(input);
 
-            Assert.That(hs.IsResponse, Is.True);
-            Assert.That(hs.IsRequest, Is.False);
             Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -76,8 +74,6 @@ namespace Sazzy.Tests
             using var input = new MemoryStream(ascii.GetBytes(response));
             using var hs = HttpMessageReader.ReadResponse(input);
 
-            Assert.That(hs.IsResponse, Is.True);
-            Assert.That(hs.IsRequest, Is.False);
             Assert.That(hs.Kind, Is.EqualTo(HttpMessageKind.Response));
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
