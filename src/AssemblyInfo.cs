@@ -1,2 +1,2 @@
-[assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Sazzy.Tests")]
+//[assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Sazzy.Tests")]
 

@@ -19,6 +19,7 @@ namespace Sazzy
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -27,60 +28,123 @@ namespace Sazzy
 
     public enum HttpMessageKind { Request, Response }
 
-    public sealed class HttpRequest : IDisposable
+    public sealed class HttpRequest : HttpMessage
     {
-        HttpMessage _message;
-
-        public HttpRequest(HttpMessage message)
+        internal HttpRequest(string method, Uri url, Version httpVersion,
+                             IReadOnlyCollection<KeyValuePair<string, string>> headers,
+                             Stream contentStream,
+                             IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders) :
+            base(HttpMessageKind.Request, httpVersion, headers, contentStream, trailingHeaders)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
-            if (message.Kind != HttpMessageKind.Request) throw new ArgumentException("Invalid HTTP message kind.", nameof(message));
-            _message = message;
+            Method = method;
+            Url = url ?? throw new ArgumentNullException(nameof(url));
         }
 
-        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpRequest));
+        public override string StartLine =>
+            string.Join(" ", Method, Url.OriginalString, "HTTP/" + HttpVersion.ToString(2));
 
-        public string  Method      => Message.RequestMethod;
-        public Uri     Url         => Message.RequestUrl;
-        public Version HttpVersion => Message.HttpVersion;
-
-        public void Dispose()
-        {
-            var message = _message;
-            _message = null;
-            message?.Dispose();
-        }
+        public string  Method { get; }
+        public Uri     Url    { get; }
     }
 
-    public sealed class HttpResponse: IDisposable
+    public sealed class HttpResponse : HttpMessage
     {
-        HttpMessage _message;
-
-        public HttpResponse(HttpMessage message)
+        internal HttpResponse(Version httpVersion, HttpStatusCode statusCode, string reasonPhrase,
+                              IReadOnlyCollection<KeyValuePair<string, string>> headers,
+                              Stream contentStream,
+                              IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders) :
+            base(HttpMessageKind.Response, httpVersion, headers, contentStream, trailingHeaders)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
-            if (message.Kind != HttpMessageKind.Response) throw new ArgumentException("Invalid HTTP message kind.", nameof(message));
-            _message = message;
+            StatusCode = statusCode;
+            ReasonPhrase = reasonPhrase;
         }
 
-        public HttpMessage Message => _message ?? throw new ObjectDisposedException(nameof(HttpResponse));
+        public override string StartLine =>
+            string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion.ToString(2));
 
-        public HttpStatusCode StatusCode   => Message.StatusCode;
-        public string         ReasonPhrase => Message.ReasonPhrase;
-        public Version        HttpVersion  => Message.HttpVersion;
-
-        public void Dispose()
-        {
-            var message = _message;
-            _message = null;
-            message?.Dispose();
-        }
+        public HttpStatusCode StatusCode   { get; }
+        public string         ReasonPhrase { get; }
     }
 
-    public static class HttpMessageReader
+    public static partial class HttpMessageReader
     {
-        public static HttpMessage Read(Stream stream) =>
-            new HttpMessage(stream);
+        public static HttpMessage Read(Stream stream)
+        {
+            Version version = null;
+            string requestMethod = null;
+            Uri requestUrl = null;
+            HttpStatusCode responseStatusCode = 0;
+            string responseReasonPhrase = null;
+            long? contentLength = null;
+            var chunked = false;
+            var headerList = new List<KeyValuePair<string, string>>();
+
+            void OnRequestLine(string method, string url, string protocolVersion)
+            {
+                version = protocolVersion != null ? new Version(protocolVersion) : new Version(0, 9);
+                requestMethod = method;
+                requestUrl = new Uri(url, UriKind.RelativeOrAbsolute);
+            }
+
+            void OnResponseLine(string protocolVersion, int statusCode, string reasonPhrase)
+            {
+                version = new Version(protocolVersion);
+                responseStatusCode = (HttpStatusCode) statusCode;
+                responseReasonPhrase = reasonPhrase;
+            }
+
+            void OnHeader(string name, string value)
+            {
+                headerList.Add(new KeyValuePair<string, string>(name, value));
+
+                if (!string.IsNullOrEmpty(value))
+                {
+                    if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        contentLength = long.Parse(value, NumberStyles.AllowLeadingWhite
+                                                         | NumberStyles.AllowTrailingWhite,
+                                                    CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            HttpMessagePrologueParser.Parse(stream,
+                HttpMessagePrologueParser.CreateDelegatingSink(
+                    OnRequestLine,
+                    OnResponseLine,
+                    OnHeader));
+
+            var trailingHeaders = chunked ? null : HttpMessage.EmptyKeyValuePairs;
+
+            var initialState
+                = ("GET".Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
+                   || "CONNECT".Equals(requestMethod, StringComparison.OrdinalIgnoreCase))
+                && (contentLength ?? 0) == 0
+                ? State.Eoi
+                : chunked
+                ? State.ReadChunkSize
+                : State.CopyAll;
+
+            var contentStream = new HttpContentStream(stream, initialState, contentLength);
+
+            var headers = new ReadOnlyCollection<KeyValuePair<string, string>>(headerList);
+
+            var message = requestMethod != null
+                        ? (HttpMessage)new HttpRequest(requestMethod, requestUrl, version, headers, contentStream, trailingHeaders)
+                        : new HttpResponse(version, responseStatusCode, responseReasonPhrase, headers, contentStream, trailingHeaders);
+
+            if (chunked)
+            {
+                contentStream.TrailingHeadersRead +=
+                    (_, hs) => message.InitializeTrailingHeaders(new ReadOnlyCollection<KeyValuePair<string, string>>(hs));
+            }
+
+            return message;
+        }
 
         public static HttpRequest ReadRequest(Stream stream)
             => Read(stream, out var req, out _) == HttpMessageKind.Request ? req
@@ -111,119 +175,47 @@ namespace Sazzy
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
             var message = Read(stream);
-            request = message.IsRequest ? new HttpRequest(message) : null;
-            response = message.IsResponse ? new HttpResponse(message) : null;
+            (request, response) = message is HttpRequest req
+                                ? (req, (HttpResponse)null)
+                                : ((HttpRequest)null, (HttpResponse)message);
             return message.Kind;
         }
     }
 
-    delegate void ChunkSizeReadEventHandler(long size);
-    delegate void TrailingHeadersReadEventHandler(IList<KeyValuePair<string, string>> headers);
-
-    public sealed class HttpMessage : IDisposable
+    public abstract class HttpMessage : IDisposable
     {
         Stream _contentStream;
         bool _isContentStreamDisowned;
 
-        internal HttpMessage(Stream input) :
-            this(input, null) {}
-
-        internal HttpMessage(Stream input, ChunkSizeReadEventHandler onChunkSizeRead)
+        protected HttpMessage(HttpMessageKind kind,
+                              Version httpVersion,
+                              IReadOnlyCollection<KeyValuePair<string, string>> headers,
+                              Stream contentStream,
+                              IReadOnlyCollection<KeyValuePair<string, string>> trailingHeaders)
         {
-            Version version = null;
-            string requestMethod = null;
-            Uri requestUrl = null;
-            HttpStatusCode responseStatusCode = 0;
-            string responseReasonPhrase = null;
-            long? contentLength = null;
-            var chunked = false;
-            var headers = new List<KeyValuePair<string, string>>();
-
-            void OnRequestLine(string method, string url, string protocolVersion)
-            {
-                version = protocolVersion != null ? new Version(protocolVersion) : new Version(0, 9);
-                requestMethod = method;
-                requestUrl = new Uri(url, UriKind.RelativeOrAbsolute);
-            }
-
-            void OnResponseLine(string protocolVersion, int statusCode, string reasonPhrase)
-            {
-                version = new Version(protocolVersion);
-                responseStatusCode = (HttpStatusCode) statusCode;
-                responseReasonPhrase = reasonPhrase;
-            }
-
-            void OnHeader(string name, string value)
-            {
-                headers.Add(new KeyValuePair<string, string>(name, value));
-
-                if (!string.IsNullOrEmpty(value))
-                {
-                    if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
-                    }
-                    else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        contentLength = long.Parse(value, NumberStyles.AllowLeadingWhite
-                                                         | NumberStyles.AllowTrailingWhite,
-                                                    CultureInfo.InvariantCulture);
-                    }
-                }
-            }
-
-            void OnTrailingHeader(IList<KeyValuePair<string, string>> headers) =>
-                TrailingHeaders = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
-
-            HttpMessagePrologueParser.Parse(input,
-                HttpMessagePrologueParser.CreateDelegatingSink(
-                    OnRequestLine,
-                    OnResponseLine,
-                    OnHeader));
-
-            HttpVersion     = version;
-            RequestMethod   = requestMethod;
-            RequestUrl      = requestUrl;
-            StatusCode      = responseStatusCode;
-            ReasonPhrase    = responseReasonPhrase;
-            Headers         = new ReadOnlyCollection<KeyValuePair<string, string>>(headers);
-            TrailingHeaders = chunked ? null : EmptyKeyValuePairs;
-            ContentLength   = contentLength;
-
-            var initialState
-                = (   "GET"    .Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
-                   || "CONNECT".Equals(requestMethod, StringComparison.OrdinalIgnoreCase))
-                && (contentLength ?? 0) == 0
-                ? State.Eoi
-                : chunked
-                ? State.ReadChunkSize
-                : State.CopyAll;
-
-            _contentStream = new HttpContentStream(input, initialState, ContentLength,
-                                                   onChunkSizeRead,
-                                                   chunked ? OnTrailingHeader
-                                                            : (TrailingHeadersReadEventHandler)null);
+            Kind = kind;
+            HttpVersion = httpVersion ?? throw new ArgumentNullException(nameof(httpVersion));
+            Headers = headers ?? throw new ArgumentNullException(nameof(headers));
+            _contentStream = contentStream;
+            TrailingHeaders = trailingHeaders;
         }
 
-        public HttpMessageKind Kind => RequestUrl != null ? HttpMessageKind.Request : HttpMessageKind.Response;
+        public HttpMessageKind Kind { get; }
 
-        public bool IsRequest       => Kind == HttpMessageKind.Request;
-        public bool IsResponse      => Kind == HttpMessageKind.Response;
+        public bool IsRequest  => Kind == HttpMessageKind.Request;
+        public bool IsResponse => Kind == HttpMessageKind.Response;
 
-        public string StartLine     => ResponseLine ?? RequestLine;
-        public string RequestLine   => IsRequest  ? string.Join(" ", RequestMethod, RequestUrl.OriginalString, "HTTP/" + HttpVersion) : null;
-        public string ResponseLine  => IsResponse ? string.Join(" ", StatusCode.ToString("d"), ReasonPhrase, "HTTP/" + HttpVersion) : null;
-
+        public abstract string StartLine { get; }
         public Version HttpVersion       { get; }
-
-        public string RequestMethod      { get; }
-        public Uri RequestUrl            { get; }
-
-        public HttpStatusCode StatusCode { get; }
-        public string ReasonPhrase       { get; }
 
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; }
         public IReadOnlyCollection<KeyValuePair<string, string>> TrailingHeaders { get; private set; }
+
+        internal void InitializeTrailingHeaders(IReadOnlyCollection<KeyValuePair<string, string>> headers)
+        {
+            Debug.Assert(TrailingHeaders == null);
+            TrailingHeaders = headers;
+        }
 
         Dictionary<string, string> _headerByName;
 
@@ -242,12 +234,20 @@ namespace Sazzy
             }
         }
 
-        public long? ContentLength { get; }
+        long? _cachedContentLength;
+
+        public long? ContentLength =>
+            _cachedContentLength ??= this["Content-Length"] switch
+            {
+                null => (long?)null,
+                string s => long.Parse(s, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite,
+                                          CultureInfo.InvariantCulture),
+            };
 
         public Stream ContentStream =>
             _contentStream ?? throw new ObjectDisposedException(nameof(HttpMessage));
 
-        bool IsDisposed => ContentStream == null;
+        protected bool IsDisposed => ContentStream == null;
 
         public void DisownContentStream() => _isContentStreamDisowned = true;
 
@@ -262,6 +262,17 @@ namespace Sazzy
                 stream.Close();
         }
 
+        internal static readonly KeyValuePair<string, string>[] EmptyKeyValuePairs = new KeyValuePair<string, string>[0];
+    }
+
+    public interface IHttpChunkedContentEventSource
+    {
+        event EventHandler<IList<KeyValuePair<string, string>>> TrailingHeadersRead;
+        event EventHandler<long> ChunkSizeRead;
+    }
+
+    partial class HttpMessageReader
+    {
         static string ReadLine(Stream stream, StringBuilder lineBuilder)
         {
             lineBuilder.Length = 0;
@@ -275,12 +286,9 @@ namespace Sazzy
             }
             return lineBuilder.ToString();
         }
-
         enum State { Eoi, CopyAll, CopyChunk, ReadChunkSize }
 
-        static readonly KeyValuePair<string, string>[] EmptyKeyValuePairs = new KeyValuePair<string, string>[0];
-
-        sealed class HttpContentStream : Stream
+        sealed class HttpContentStream : Stream, IHttpChunkedContentEventSource
         {
             Stream _input;
             State _state;
@@ -290,19 +298,15 @@ namespace Sazzy
             long? _remainingLength;
             StringBuilder _lineBuilder;
 
-            ChunkSizeReadEventHandler _onChunkSizeRead;
-            TrailingHeadersReadEventHandler _onTrailingHeadersRead;
-
-            public HttpContentStream(Stream input, State state, long? length,
-                                     ChunkSizeReadEventHandler onChunkSizeRead,
-                                     TrailingHeadersReadEventHandler onTrailingHeadersRead)
+            public HttpContentStream(Stream input, State state, long? length)
             {
                 _input = input;
                 _state = state;
                 _remainingLength = _contentLength = length;
-                _onChunkSizeRead = onChunkSizeRead;
-                _onTrailingHeadersRead = onTrailingHeadersRead;
             }
+
+            public event EventHandler<long> ChunkSizeRead;
+            public event EventHandler<IList<KeyValuePair<string, string>>> TrailingHeadersRead;
 
             StringBuilder LineBuilder => _lineBuilder ??= new StringBuilder();
 
@@ -331,8 +335,6 @@ namespace Sazzy
                 _input.Close();
                 _input = null;
                 _lineBuilder = null;
-                _onChunkSizeRead = null;
-                _onTrailingHeadersRead = null;
             }
 
             HttpContentStream This => Return(this);
@@ -405,7 +407,7 @@ namespace Sazzy
                         var chunkSize = int.Parse(i > 0 ? line.Substring(0, i) : line, NumberStyles.HexNumber);
                         _remainingLength = chunkSize;
 
-                        _onChunkSizeRead?.Invoke(chunkSize);
+                        ChunkSizeRead?.Invoke(this, chunkSize);
 
                         if (chunkSize > 0)
                         {
@@ -417,7 +419,7 @@ namespace Sazzy
                             foreach (var header in HttpMessagePrologueParser.ReadHeaders(_input))
                                 (headers ??= new List<KeyValuePair<string, string>>()).Add(header);
 
-                            _onTrailingHeadersRead?.Invoke(headers ?? (IList<KeyValuePair<string, string>>)EmptyKeyValuePairs);
+                            TrailingHeadersRead?.Invoke(this, headers ?? (IList<KeyValuePair<string, string>>)HttpMessage.EmptyKeyValuePairs);
 
                             _state = State.Eoi;
                         }
@@ -431,7 +433,7 @@ namespace Sazzy
 
             static readonly char[] ChunkSizeDelimiters = { ';', ' ' };
 
-            string ReadLine() => HttpMessage.ReadLine(_input, LineBuilder);
+            string ReadLine() => HttpMessageReader.ReadLine(_input, LineBuilder);
 
             #region Unsupported members
 

@@ -66,16 +66,16 @@ namespace Sazzy
         static readonly HttpMessageHashHandler Colon = Literal(':');
 
         static readonly HttpMessageHashHandler RequestMethodHashHandler =
-            String(m => m.RequestMethod.ToUpperInvariant(), Encoding.ASCII);
+            String(m => ((HttpRequest)m).Method.ToUpperInvariant(), Encoding.ASCII);
 
         static readonly HttpMessageHashHandler RequestUrlHashHandler =
-            String(m => m.RequestUrl.OriginalString, Encoding.ASCII);
+            String(m => ((HttpRequest)m).Url.OriginalString, Encoding.ASCII);
 
         static readonly HttpMessageHashHandler StatusCodeHashHandler =
-            String(m => ((int) m.StatusCode).ToString(CultureInfo.InvariantCulture), Encoding.ASCII);
+            String(m => ((int)((HttpResponse)m).StatusCode).ToString(CultureInfo.InvariantCulture), Encoding.ASCII);
 
         static readonly HttpMessageHashHandler ReasonPhraseHashHandler =
-            String(m => m.ReasonPhrase, Encoding.ASCII);
+            String(m => ((HttpResponse)m).ReasonPhrase, Encoding.ASCII);
 
         static readonly HttpMessageHashHandler HttpVersionHashHandler =
             String(m => m.HttpVersion.ToString(2), Encoding.ASCII);
@@ -134,8 +134,8 @@ namespace Sazzy
             message switch
             {
                 null => throw new ArgumentNullException(nameof(message)),
-                var m when m.IsRequest => RequestHashConfig.Default.Hash(hashAlgorithm, new HttpRequest(m)),
-                var m => ResponseHashConfig.Default.Hash(hashAlgorithm, new HttpResponse(m))
+                var m when m.IsRequest => RequestHashConfig.Default.Hash(hashAlgorithm, (HttpRequest)m),
+                var m => ResponseHashConfig.Default.Hash(hashAlgorithm, (HttpResponse)m)
             };
 
         public static string HashString(this HttpMessage message, HashAlgorithmName hashAlgorithm,

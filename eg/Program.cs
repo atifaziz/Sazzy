@@ -31,8 +31,8 @@ namespace Sazzy.Sample
             {
                 foreach (var e in Saz.ReadCorrelated(arg, (reqn, req, rspn, rsp) => new
                 {
-                    Request  = new { FullName = reqn, req.Message },
-                    Response = new { FullName = rspn, rsp.Message },
+                    Request  = new { FullName = reqn, Message = (HttpMessage)req },
+                    Response = new { FullName = rspn, Message = (HttpMessage)rsp },
                 }))
                 {
                     foreach (var r in new[] { e.Request, e.Response })

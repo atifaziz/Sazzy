@@ -40,40 +40,39 @@ namespace Sazzy
                 "Last-Modified",
             };
 
-        public static HttpResponseMessage ToResponseMessage(this HttpMessage message) =>
-            ToResponseMessage(message, null);
+        public static HttpResponseMessage ToResponseMessage(this HttpResponse response) =>
+            ToResponseMessage(response, null);
 
-        public static HttpResponseMessage ToResponseMessage(this HttpMessage message, HttpRequestMessage request)
+        public static HttpResponseMessage ToResponseMessage(this HttpResponse response, HttpRequestMessage request)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
-            if (!message.IsResponse) throw new ArgumentException("HTTP message does not represent a response message.", nameof(message));
+            if (response == null) throw new ArgumentNullException(nameof(response));
 
-            var response = new HttpResponseMessage(message.StatusCode)
+            var rsp = new HttpResponseMessage(response.StatusCode)
             {
                 RequestMessage = request,
-                Version        = message.HttpVersion,
-                ReasonPhrase   = message.ReasonPhrase,
-                Content        = new StreamContent(message.ContentStream),
+                Version        = response.HttpVersion,
+                ReasonPhrase   = response.ReasonPhrase,
+                Content        = new StreamContent(response.ContentStream),
             };
 
-            HttpHeaders contentHeaders = response.Content.Headers;
+            HttpHeaders contentHeaders = rsp.Content.Headers;
 
             var headers =
-                from h in message.Headers
+                from h in response.Headers
                 select new
                 {
                     Name = h.Key, h.Value,
                     Headers = ContentHeaderNames.Contains(h.Key)
                             ? contentHeaders
-                            : response.Headers,
+                            : rsp.Headers,
                 };
 
             foreach (var e in headers)
                 e.Headers.TryAddWithoutValidation(e.Name, e.Value);
 
-            message.DisownContentStream();
+            response.DisownContentStream();
 
-            return response;
+            return rsp;
         }
 
         static readonly Dictionary<string, HttpMethod> HttpMethods = new[]
@@ -91,37 +90,36 @@ namespace Sazzy
         static HttpMethod ParseHttpMethod(string method) =>
             HttpMethods.TryGetValue(method, out var m) ? m : throw new FormatException($"'{method}' is not a valid HTTP method.");
 
-        public static HttpRequestMessage ToRequestMessage(this HttpMessage message)
+        public static HttpRequestMessage ToRequestMessage(this HttpRequest request)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
-            if (!message.IsRequest) throw new ArgumentException("HTTP message does not represent a request message.", nameof(message));
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
-            var method = ParseHttpMethod(message.RequestMethod);
+            var method = ParseHttpMethod(request.Method);
 
-            var request = new HttpRequestMessage(method, message.RequestUrl)
+            var req = new HttpRequestMessage(method, request.Url)
             {
-                Version = message.HttpVersion,
-                Content = new StreamContent(message.ContentStream),
+                Version = request.HttpVersion,
+                Content = new StreamContent(request.ContentStream),
             };
 
-            HttpHeaders contentHeaders = request.Content.Headers;
+            HttpHeaders contentHeaders = req.Content.Headers;
 
             var headers =
-                from h in message.Headers
+                from h in request.Headers
                 select new
                 {
                     Name = h.Key, h.Value,
                     Headers = ContentHeaderNames.Contains(h.Key)
                             ? contentHeaders
-                            : request.Headers,
+                            : req.Headers,
                 };
 
             foreach (var e in headers)
                 e.Headers.TryAddWithoutValidation(e.Name, e.Value);
 
-            message.DisownContentStream();
+            request.DisownContentStream();
 
-            return request;
+            return req;
         }
     }
 }

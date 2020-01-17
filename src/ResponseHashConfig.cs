@@ -75,12 +75,12 @@ namespace Sazzy
             Hash(hashAlgorithm, response).ToHexadecimalString();
 
         public byte[] Hash(HashAlgorithmName hashAlgorithm, HttpResponse response) =>
-            response.Message.Hash(hashAlgorithm,
-                                  Version         ?? HttpMessageHasher.Nop,
-                                  StatusCode      ?? HttpMessageHasher.Nop,
-                                  ReasonPhrase    ?? HttpMessageHasher.Nop,
-                                  Headers         ?? HttpMessageHasher.Nop,
-                                  Content         ?? HttpMessageHasher.Nop,
-                                  TrailingHeaders ?? HttpMessageHasher.Nop);
+            response.Hash(hashAlgorithm,
+                          Version         ?? HttpMessageHasher.Nop,
+                          StatusCode      ?? HttpMessageHasher.Nop,
+                          ReasonPhrase    ?? HttpMessageHasher.Nop,
+                          Headers         ?? HttpMessageHasher.Nop,
+                          Content         ?? HttpMessageHasher.Nop,
+                          TrailingHeaders ?? HttpMessageHasher.Nop);
     }
 }

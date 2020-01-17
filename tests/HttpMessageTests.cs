@@ -31,7 +31,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(response));
-            using var hs = HttpMessageReader.Read(input);
+            using var hs = HttpMessageReader.ReadResponse(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.IsRequest, Is.False);
@@ -39,9 +39,6 @@ namespace Sazzy.Tests
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
-
-            Assert.That(hs.RequestUrl, Is.Null);
-            Assert.That(hs.RequestMethod, Is.Null);
 
             Assert.That(hs.Headers.Count, Is.EqualTo(2));
 
@@ -77,7 +74,7 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(response));
-            using var hs = HttpMessageReader.Read(input);
+            using var hs = HttpMessageReader.ReadResponse(input);
 
             Assert.That(hs.IsResponse, Is.True);
             Assert.That(hs.IsRequest, Is.False);
@@ -85,9 +82,6 @@ namespace Sazzy.Tests
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
             Assert.That(hs.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(hs.ReasonPhrase, Is.EqualTo("OK"));
-
-            Assert.That(hs.RequestUrl, Is.Null);
-            Assert.That(hs.RequestMethod, Is.Null);
 
             Assert.That(hs.Headers.Count, Is.EqualTo(3));
 
@@ -130,14 +124,11 @@ namespace Sazzy.Tests
 
             var ascii = Encoding.ASCII;
             using var input = new MemoryStream(ascii.GetBytes(request));
-            using var hs = HttpMessageReader.Read(input);
+            using var hs = HttpMessageReader.ReadRequest(input);
 
             Assert.That(hs.HttpVersion, Is.EqualTo(new Version(1, 1)));
-            Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo("/"));
-            Assert.That(hs.RequestMethod, Is.EqualTo("GET"));
-
-            Assert.That(hs.StatusCode, Is.EqualTo((HttpStatusCode) 0));
-            Assert.That(hs.ReasonPhrase, Is.Null);
+            Assert.That(hs.Url.OriginalString, Is.EqualTo("/"));
+            Assert.That(hs.Method, Is.EqualTo("GET"));
 
             Assert.That(hs.Headers.Count, Is.EqualTo(2));
 
@@ -164,22 +155,22 @@ namespace Sazzy.Tests
         {
             var chunkSizes = new List<long>();
 
-            void OnChunkSizeRead(long size) =>
-                chunkSizes.Add(size);
-
             var ms = message.OpenRawStream();
-            var hs = new HttpMessage(ms, OnChunkSizeRead);
+            var hs = HttpMessageReader.Read(ms);
+            ((IHttpChunkedContentEventSource)hs.ContentStream).ChunkSizeRead +=
+                (_, size) => chunkSizes.Add(size);
 
             Assert.That(hs.HttpVersion.Major, Is.EqualTo(message.HttpMajor));
             Assert.That(hs.HttpVersion.Minor, Is.EqualTo(message.HttpMinor));
 
             if (message.Type == HttpParserType.Request)
             {
-                Assert.That(hs.RequestMethod, Is.EqualTo(message.Method.ToString().ToUpperInvariant()));
-                Assert.That(hs.RequestUrl.OriginalString, Is.EqualTo(message.RequestUrl));
+                var request = (HttpRequest)hs;
+                Assert.That(request.Method, Is.EqualTo(message.Method.ToString().ToUpperInvariant()));
+                Assert.That(request.Url.OriginalString, Is.EqualTo(message.RequestUrl));
 
                 var exampleRequestUrl = new Lazy<Uri>(() =>
-                    new Uri(new Uri("http://www.example.com/"), hs.RequestUrl.OriginalString));
+                    new Uri(new Uri("http://www.example.com/"), request.Url.OriginalString));
 
                 if (message.Host != null)
                     Assert.That(exampleRequestUrl.Value.Host, Is.EqualTo(message.Host));
@@ -213,8 +204,9 @@ namespace Sazzy.Tests
             }
             else
             {
-                Assert.That(hs.StatusCode, Is.EqualTo((HttpStatusCode) message.StatusCode));
-                Assert.That(hs.ReasonPhrase, Is.EqualTo(message.ResponseStatus));
+                var response = (HttpResponse)hs;
+                Assert.That(response.StatusCode, Is.EqualTo((HttpStatusCode) message.StatusCode));
+                Assert.That(response.ReasonPhrase, Is.EqualTo(message.ResponseStatus));
             }
 
             if (!TestContent(hs.ContentStream, message.Body))
