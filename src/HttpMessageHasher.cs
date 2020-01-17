@@ -26,7 +26,7 @@ namespace Sazzy
     using System.Threading.Tasks;
 
     public delegate Task HttpMessageHashHandler(HttpMessage message, ArrayPool<byte> pool,
-                                                Func<ArraySegment<byte>, Task> writer);
+                                                Action<ArraySegment<byte>> writer);
 
     public static class HttpMessageHasher
     {
@@ -34,19 +34,20 @@ namespace Sazzy
             (message, pool, writer) => String(f(message), encoding)(message, pool, writer);
 
         static HttpMessageHashHandler String(string s, Encoding encoding) =>
-            async (message, pool, writer) =>
+            (message, pool, writer) =>
             {
                 var size = encoding.GetByteCount(s);
                 var buffer = pool.Rent(size);
                 try
                 {
                     var length = encoding.GetBytes(s, 0, s.Length, buffer, 0);
-                    await writer(new ArraySegment<byte>(buffer, 0, length)).ConfigureAwait(false);
+                    writer(new ArraySegment<byte>(buffer, 0, length));
                 }
                 finally
                 {
                     pool.Return(buffer);
                 }
+                return Task.CompletedTask;
             };
 
         [ThreadStatic] static byte[] _singleByteBuffer;
@@ -58,7 +59,8 @@ namespace Sazzy
             {
                 var buffer = SingleByteBuffer;
                 buffer[0] = checked((byte)ch);
-                return writer(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                writer(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                return Task.CompletedTask;
             };
 
         static readonly HttpMessageHashHandler Colon = Literal(':');
@@ -115,7 +117,7 @@ namespace Sazzy
                 {
                     int read;
                     while ((read = await message.ContentStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
-                        await writer(new ArraySegment<byte>(buffer, 0, read)).ConfigureAwait(false);
+                        writer(new ArraySegment<byte>(buffer, 0, read));
                 }
                 finally
                 {
@@ -150,11 +152,7 @@ namespace Sazzy
             using var hash = IncrementalHash.CreateHash(hashAlgorithm);
             handler = Collect(handlers.Prepend(handler));
             var task = handler(message, ArrayPool<byte>.Create(),
-                               buffer =>
-                               {
-                                   hash.AppendData(buffer.Array, buffer.Offset, buffer.Count);
-                                   return Task.CompletedTask;
-                               });
+                               buffer => hash.AppendData(buffer.Array, buffer.Offset, buffer.Count));
             task.GetAwaiter().GetResult();
             return hash.GetHashAndReset();
         }
