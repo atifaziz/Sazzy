@@ -134,8 +134,8 @@ namespace Sazzy
             message switch
             {
                 null => throw new ArgumentNullException(nameof(message)),
-                var m when m.IsRequest => m.Hash(hashAlgorithm, RequestMethod(), RequestUrl(), HttpVersion(), Headers(), Content(), TrailingHeaders()),
-                var m => m.Hash(hashAlgorithm, HttpVersion(), StatusCode(), ReasonPhrase(), Headers(), Content(), TrailingHeaders())
+                var m when m.IsRequest => RequestHashConfig.Default.Hash(hashAlgorithm, new HttpRequest(m)),
+                var m => ResponseHashConfig.Default.Hash(hashAlgorithm, new HttpResponse(m))
             };
 
         public static string HashString(this HttpMessage message, HashAlgorithmName hashAlgorithm,
