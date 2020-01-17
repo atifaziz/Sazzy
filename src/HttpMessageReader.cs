@@ -103,8 +103,13 @@ namespace Sazzy
 
             if (chunked)
             {
-                contentStream.TrailingHeadersRead +=
-                    (_, hs) => message.InitializeTrailingHeaders(new ReadOnlyCollection<KeyValuePair<string, string>>(hs));
+                void OnTrailingHeadersRead(object _, IList<KeyValuePair<string, string>> hs)
+                {
+                    contentStream.TrailingHeadersRead -= OnTrailingHeadersRead;
+                    message.InitializeTrailingHeaders(new ReadOnlyCollection<KeyValuePair<string, string>>(hs));
+                }
+
+                contentStream.TrailingHeadersRead += OnTrailingHeadersRead;
             }
 
             return message;
