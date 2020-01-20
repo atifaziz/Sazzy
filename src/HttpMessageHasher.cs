@@ -50,21 +50,6 @@ namespace Sazzy
                 return Task.CompletedTask;
             };
 
-        [ThreadStatic] static byte[] _singleByteBuffer;
-
-        static byte[] SingleByteBuffer => _singleByteBuffer ??= new byte[1];
-
-        static HttpMessageHashHandler Literal(char ch) =>
-            (message, pool, writer) =>
-            {
-                var buffer = SingleByteBuffer;
-                buffer[0] = checked((byte)ch);
-                writer(new ArraySegment<byte>(buffer, 0, buffer.Length));
-                return Task.CompletedTask;
-            };
-
-        static readonly HttpMessageHashHandler Colon = Literal(':');
-
         static readonly HttpMessageHashHandler RequestMethodHashHandler =
             String(m => ((HttpRequest)m).Method.ToUpperInvariant(), Encoding.ASCII);
 
@@ -104,8 +89,7 @@ namespace Sazzy
                                                                 h.Value.Trim())
                         into h
                         orderby h.Key
-                        select Collect(String(h.Key, Encoding.ASCII), Colon,
-                                       String(h.Value, Encoding.ASCII)))
+                        select Collect(String(h.Key, Encoding.ASCII), String(h.Value, Encoding.ASCII)))
                     (message, pool, writer);
         }
 
