@@ -100,6 +100,7 @@ namespace Sazzy
             return (message, pool, writer) =>
                 Collect(from h in filter(message)
                         group h.Value.Trim() by h.Key.ToLowerInvariant() into h
+                        orderby h.Key
                         select Collect(h.Select(v => String(v, Encoding.ASCII))
                                         .Prepend(String(h.Key, Encoding.ASCII))))
                     (message, pool, writer);
