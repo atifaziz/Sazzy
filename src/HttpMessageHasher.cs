@@ -83,13 +83,25 @@ namespace Sazzy
         {
             if (filter == null) throw new ArgumentNullException(nameof(filter));
 
+            // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+            //
+            // Multiple message-header fields with the same field-name MAY be
+            // present in a message if and only if the entire field-value for
+            // that header field is defined as a comma-separated list [i.e.,
+            // #(values)]. It MUST be possible to combine the multiple header
+            // fields into one "field-name: field-value" pair, without
+            // changing the semantics of the message, by appending each
+            // subsequent field-value to the first, each separated by a comma.
+            // The order in which header fields with the same field-name are
+            // received is therefore significant to the interpretation of the
+            // combined field value, and thus a proxy MUST NOT change the
+            // order of these field values when a message is forwarded.
+
             return (message, pool, writer) =>
                 Collect(from h in filter(message)
-                        select new KeyValuePair<string, string>(h.Key.ToLowerInvariant(),
-                                                                h.Value.Trim())
-                        into h
-                        orderby h.Key
-                        select Collect(String(h.Key, Encoding.ASCII), String(h.Value, Encoding.ASCII)))
+                        group h.Value.Trim() by h.Key.ToLowerInvariant() into h
+                        select Collect(h.Select(v => String(v, Encoding.ASCII))
+                                        .Prepend(String(h.Key, Encoding.ASCII))))
                     (message, pool, writer);
         }
 
