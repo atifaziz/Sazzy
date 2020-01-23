@@ -18,6 +18,7 @@ namespace Sazzy.Sample
 {
     using System;
     using System.IO;
+    using System.Linq;
 
     static class Program
     {
@@ -59,7 +60,11 @@ namespace Sazzy.Sample
             foreach (var (name, value) in message.Headers)
                 headerWriter.WriteLine(name + ": " + value);
 
-            var chunked = string.Equals(message["Transfer-Encoding"]?.Trim(), "chunked", StringComparison.OrdinalIgnoreCase);
+            var chunked =
+                message["Transfer-Encoding"]?.Trim()
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Any(v => "chunked".Equals(v.Trim(), StringComparison.OrdinalIgnoreCase))
+                    ?? false;
 
             if (contentStream == null && !chunked)
                 return;

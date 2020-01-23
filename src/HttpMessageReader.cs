@@ -21,6 +21,7 @@ namespace Sazzy
     using System.Collections.ObjectModel;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Text;
 
@@ -32,6 +33,8 @@ namespace Sazzy
 
     public static class HttpMessageReader
     {
+        static readonly char[] CommaSingletonArray = { ',' };
+
         public static HttpMessage Read(Stream stream)
         {
             Version version = null;
@@ -65,7 +68,15 @@ namespace Sazzy
                 {
                     if ("Transfer-Encoding".Equals(name, StringComparison.OrdinalIgnoreCase))
                     {
-                        chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                        if (value.IndexOf(',') < 0)
+                        {
+                            chunked = "chunked".Equals(value.Trim(), StringComparison.OrdinalIgnoreCase);
+                        }
+                        else
+                        {
+                            chunked = value.Split(CommaSingletonArray, StringSplitOptions.RemoveEmptyEntries)
+                                            .Any(v => "chunked".Equals(v.Trim(), StringComparison.OrdinalIgnoreCase));
+                        }
                     }
                     else if ("Content-Length".Equals(name, StringComparison.OrdinalIgnoreCase))
                     {
