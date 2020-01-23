@@ -73,7 +73,7 @@ namespace Sazzy
             }
             else
             {
-                throw new FormatException("Invalid HTTP request line or status response:" + startLine);
+                throw new FormatException("Invalid HTTP request line or status response: " + startLine);
             }
 
             foreach (var (name, value) in ReadHeaders(input, lineBuilder))
