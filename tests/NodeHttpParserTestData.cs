@@ -1205,7 +1205,6 @@ namespace Sazzy.Tests
         public static readonly IEnumerable<Message> ResponseMessages = new[]
         {
             Message.Response("GOOGLE_301",
-                ignore: "Pending review.",
                 name: "google 301",
                 raw: "HTTP/1.1 301 Moved Permanently\r\n"
                     + "Location: http://www.google.com/\r\n"
