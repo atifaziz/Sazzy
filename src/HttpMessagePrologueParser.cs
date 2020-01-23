@@ -63,7 +63,8 @@ namespace Sazzy
                 var reasonPhrase = groups[3].Value;
                 sink.OnResponseLine(version, statusCode, reasonPhrase);
             }
-            else if ((match = Regex.Match(startLine, @"^([A-Za-z]+)\x20+([^\x20]+)(?:\x20+HTTP/([1-9]\.[0-9]))?$")).Success)
+            else if ((match = Regex.Match(startLine,
+                                  @"^([!#$%&""'*.^_`|~0-9A-Za-z+-]+)\x20+([^\x20]+)(?:\x20+HTTP/([1-9]\.[0-9]))?$")).Success)
             {
                 var groups = match.Groups;
                 var method  = groups[1].Value;

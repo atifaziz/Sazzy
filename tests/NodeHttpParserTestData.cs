@@ -648,7 +648,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("MSEARCH_REQ",
-                ignore: "Pending review.",
                 name: "m-search request",
                 raw: "M-SEARCH * HTTP/1.1\r\n"
                     + "HOST: 239.255.255.250:1900\r\n"

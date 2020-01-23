@@ -162,7 +162,11 @@ namespace Sazzy.Tests
             if (message.Type == HttpParserType.Request)
             {
                 var request = (HttpRequest)hs;
-                Assert.That(request.Method, Is.EqualTo(message.Method.ToString().ToUpperInvariant()));
+
+                Assert.That(request.Method, Is.EqualTo(message.Method == HttpRequestMethod.MSearch
+                                                       ? "M-SEARCH"
+                                                       : message.Method.ToString().ToUpperInvariant()));
+
                 Assert.That(request.Url.OriginalString, Is.EqualTo(message.RequestUrl));
 
                 var exampleRequestUrl = new Lazy<Uri>(() =>
@@ -183,7 +187,8 @@ namespace Sazzy.Tests
                 if (!string.IsNullOrEmpty(message.RequestPath))
                 {
                     var path = exampleRequestUrl.Value.GetComponents(UriComponents.Path, UriFormat.Unescaped);
-                    Assert.That("/" + path, Is.EqualTo(message.RequestPath));
+                    Assert.That(message.Method == HttpRequestMethod.MSearch ? path : "/" + path,
+                                Is.EqualTo(message.RequestPath));
                 }
 
                 if (message.QueryString != null)
