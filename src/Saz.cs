@@ -80,6 +80,14 @@ namespace Sazzy
             }
         }
 
+        /// <remarks>
+        /// The <see cref="HttpRequest"/> argument passed to the
+        /// <paramref name="keySelector"/> function and the
+        /// <see cref="HttpResponse"/> argument passed to the
+        /// <paramref name="valueSelector"/> function are disposed before
+        /// this method returns.
+        /// </remarks>
+
         public static IEnumerable<KeyValuePair<TKey, Func<TValue>>>
             ReadMap<TKey, TValue>(
                 string path,
