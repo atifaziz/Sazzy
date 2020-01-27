@@ -28,9 +28,9 @@ namespace Sazzy
         enum MessageKind { Request, Response }
 
         /// <remarks>
-        /// The <see cref="HttpMessage"/> arguments passed to the
-        /// <paramref name="selector"/> function are disposed before this
-        /// method returns.
+        /// The <see cref="HttpRequest"/> and <see cref="HttpResponse"/>
+        /// arguments passed to the <paramref name="selector"/> function are
+        /// disposed before this method returns.
         /// </remarks>
 
         public static IEnumerable<T> ReadCorrelated<T>(string path,
