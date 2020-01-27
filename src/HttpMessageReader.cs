@@ -96,9 +96,10 @@ namespace Sazzy
             var trailingHeaders = chunked ? null : HttpMessage.EmptyKeyValuePairs;
 
             var initialState
-                = ("GET".Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
-                   || "CONNECT".Equals(requestMethod, StringComparison.OrdinalIgnoreCase))
-                && (contentLength ?? 0) == 0
+                = "CONNECT".Equals(requestMethod, StringComparison.OrdinalIgnoreCase)
+                  || "GET".Equals(requestMethod, StringComparison.OrdinalIgnoreCase) && (contentLength ?? 0) == 0
+                  || responseStatusCode == HttpStatusCode.SwitchingProtocols && contentLength is null && !chunked
+                  || contentLength == 0
                 ? State.Eoi
                 : chunked
                 ? State.ReadChunkSize
@@ -238,7 +239,6 @@ namespace Sazzy
                 {
                     case State.Eoi:
                     {
-                        Free();
                         return result;
                     }
                     case State.CopyAll:

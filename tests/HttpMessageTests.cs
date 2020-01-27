@@ -151,8 +151,10 @@ namespace Sazzy.Tests
         {
             var chunkSizes = new List<long>();
 
-            var ms = message.OpenRawStream();
-            var hs = HttpMessageReader.Read(ms);
+            var rawBytes = message.GetRawBytes();
+            using var ms = new MemoryStream(rawBytes);
+            using var hs = HttpMessageReader.Read(ms);
+
             ((IHttpChunkedContentEventSource)hs.ContentStream).ChunkSizeRead +=
                 (_, size) => chunkSizes.Add(size);
 
@@ -210,8 +212,20 @@ namespace Sazzy.Tests
                 Assert.That(response.ReasonPhrase, Is.EqualTo(message.ResponseStatus));
             }
 
-            if (!TestContent(hs.ContentStream, message.Body))
-                TestContent(ms.Buffer(), message.Upgrade);
+            if (message.Body != null)
+            {
+                foreach (var ch in message.Body)
+                    Assert.That((char)hs.ContentStream.ReadByte(), Is.EqualTo(ch));
+            }
+
+            Assert.That(hs.ContentStream.ReadByte(), Is.EqualTo(-1));
+
+            if (message.Upgrade != null)
+            {
+                var i = checked((int)ms.Position);
+                foreach (var ch in message.Upgrade)
+                    Assert.That(ch, Is.EqualTo((char)rawBytes[i++]));
+            }
 
             var headers = hs.Headers;
             Assert.That(hs.TrailingHeaders switch { null => headers, var ths => headers.Concat(ths) },
@@ -221,22 +235,6 @@ namespace Sazzy.Tests
             {
                 Assert.That(chunkSizes.Count, Is.EqualTo(message.NumChunksComplete));
                 Assert.That(chunkSizes.SkipLast(1), Is.EqualTo(message.ChunkLengths));
-            }
-
-            static bool TestContent(Stream content, string body)
-            {
-                if (body == null)
-                    return false;
-
-                using (var e = body.GetEnumerator())
-                for (var offset = 0; e.MoveNext(); offset++)
-                {
-                    var b = content.ReadByte();
-                    Assert.That(b, Is.EqualTo(e.Current), "Byte offset = {0}", offset);
-                }
-
-                Assert.That(content.ReadByte(), Is.EqualTo(-1), "EOF.");
-                return true;
             }
         }
     }

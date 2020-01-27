@@ -24,7 +24,6 @@ namespace Sazzy.Tests
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using static HttpRequestMethod;
     using IHeaderCollection = System.Collections.Generic.IReadOnlyCollection<System.Collections.Generic.KeyValuePair<string, string>>;
@@ -195,8 +194,14 @@ namespace Sazzy.Tests
                 Ignore               = ignore;
             }
 
-            public MemoryStream OpenRawStream() =>
-                new MemoryStream(Raw.Select(ch => (byte)ch).ToArray());
+            public byte[] GetRawBytes()
+            {
+                var bytes = new byte[Raw.Length];
+                var i = 0;
+                foreach (var ch in Raw)
+                    bytes[i++] = checked((byte)ch);
+                return bytes;
+            }
 
             public override string ToString() =>
                 $"{{ {Type}, {Id}, \"{Name}\" }}";
@@ -1107,7 +1112,6 @@ namespace Sazzy.Tests
             ),
 
             Message.Request("CONNECT_WITH_BODY_REQUEST",
-                ignore: "Pending review.",
                 name: "connect with body request",
                 raw: "CONNECT foo.bar.com:443 HTTP/1.0\r\n"
                     + "User-agent: Mozilla/1.1N\r\n"
